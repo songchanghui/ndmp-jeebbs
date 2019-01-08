@@ -1,0 +1,46 @@
+<div class="head" style="position: relative;">
+	 <a href="${base}/" data-ajax="false" ><img src="/${res}/bbs_forum/img/logo.png"></a>
+	 <div class="search" style="position: absolute;right:0px;width:70px;">
+             <a href="${base}/topic/search.jhtml" data-ajax="false" style="-webkit-tap-highlight-color:rgba(0,0,0,0);display: inline-block;float: left;margin-right: 10px;"><img src="/${res}/bbs_forum/img/search.png"></a>
+<a href="${base}/member/mytopic.jhtml" data-ajax="false" style="color:#ff5a00; font-size: 14px;display: inline-block;float: left;"><img src="/${res}/bbs_forum/img/user.png" ></a>
+         </div>
+</div> 
+<div class="nav"   style="height:48px;
+    line-height: 32px; ">
+ 
+<a href="${base}/" data-ajax="false" style="color:#ff5a00;float: left; font-size:18px;display: block;  ">首页</a>
+ [@category_list]
+   	    [#list tag_list as ctg]
+   	     [@forum_list categoryId=ctg.id]
+      		[#list tag_list as f]
+<a href="${f.url!}" data-ajax="false" style="color:#ff5a00;float: left;font-size: 18px;display: block;">${f.title!}</a>
+		  
+		 [/#list]
+      	    [/@forum_list]
+           [/#list]
+      	 [/@category_list]
+
+  <!--  <a href="${base}/member/mytopic.jhtml" data-ajax="false"><img src="/${res}/bbs_forum/img/user.png">个人中心</a>-->
+</div>
+
+   <p style="padding:10px 0 0px 3%;color:#666;font-size:14px;">
+
+   [@config_count]
+	今日:${configcache.postToday!}
+	昨日: ${configcache.postYestoday!} 
+	主题:${configcache.topicTotal!} 
+	帖子:${configcache.postTotal!}
+	会员:${configcache.userTotal!} 
+	[/@config_count]
+   	在线人数 <span id="usertotal">
+
+</span>
+   </p>
+
+<script type="text/javascript">
+	$.post("${base}/session/statistic.jspx", {
+		 	member:true
+		}, function(data) {
+			$("#usertotal").html(data.usertotal);
+	}, "json");
+</script>
