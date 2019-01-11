@@ -48,7 +48,8 @@ $(function() {
             <!--右侧切换内容-->
             <div class="right-tab">
                   <div class="tooltip-con">
-                      <a href="${base}/"><img src="/${res}/bbs_forum/images/icon-card-on.png" /></a>
+					  <a href="javascript:openUrl('${base}/')"><img
+							  src="/${res}/bbs_forum/images/icon-card-on.png"/></a>
                       <div class="tooltip">图文展示</div>
                   </div>
                   <div class="tooltip-con">
@@ -121,12 +122,14 @@ $(function() {
                     <span>来自话题:</span>
                     [#list topic.types as t]
                     [#if t_index<3]
-                    <span class="topic"><a href="${t.url!}" target="_blank">${t.name!}</a></span>
+					<span class="topic"><a href="javascript:openUrl('${t.url!}')" target="_blank">${t.name!}</a></span>
                     [/#if]
                     [/#list]
                 </div>
                 [/#if]
-                <h2 class="theme-tit"><a id="link${topic.id}" href="${topic.url}" target="_blank" [#if topic.style]style="color:#${topic.styleColor!};"[/#if]>[@text_cut s=topic.title?html /]</a></h2>
+				<h2 class="theme-tit"><a id="link${topic.id}" href="javascript:openUrl('${topic.url}')" target="_blank"
+										 [#if topic.style]style="color:#${topic.styleColor!};" [/#if]>[@text_cut
+					s=topic.title?html /]</a></h2>
                 [#if topic.affix]
                 <ul class="theme-pics clearfix" id="themePics${topic.firstPost.id}">
 

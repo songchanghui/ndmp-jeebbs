@@ -4,7 +4,7 @@
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
     <title>${site.name} - 101  论坛   正妹  小说  美女 漫画 二次元 休闲  娱乐  下载  资源  共享</title>
     <meta name="keywords" content="101  论坛   正妹  小说  美女 漫画 二次元 休闲  娱乐  下载  资源  共享" />
-    <meta name="description" content="101  论坛   正妹  小说  美女 漫画 二次元 休闲  娱乐  下载  资源  共享" /> 
+      <meta name="description" content="101  论坛   正妹  小说  美女 漫画 二次元 休闲  娱乐  下载  资源  共享"/>
 <meta property="qc:admins" content="26435257006110776654" />
 	<link href="${resSys}/front.css" rel="stylesheet" type="text/css"/>
 
@@ -14,7 +14,7 @@
     <link rel="stylesheet" type="text/css" href="/${res}/bbs_forum/css/layout.css" />
     <script type="text/javascript">
 	 	function clearTopicContent(topicId){
-	 		$("#topic"+topicId, window.parent.document).html("");//获得父窗口里面的元素 
+            $("#topic" + topicId, window.parent.document).html("");//获得父窗口里面的元素
 	 	}
 	 </script>
  </head>
@@ -33,11 +33,11 @@
           [/#if]
           </div>
     [#else]
-          [#if post.hidden] 
-          	[#if user??] 
+        [#if post.hidden]
+        [#if user??]
           		[#if post.creater.id==user.id||user.moderator]
          			 <div class="tpc_content f14">${post.contentHtml}</div>
-          		[#else] 
+        [#else]
 	          		[#if !post.topic.haveReply?contains(','+user.id+',')]
 	          			<div class="tpc_content f14">${post.hideContent}</div>
 	          		[#else]
