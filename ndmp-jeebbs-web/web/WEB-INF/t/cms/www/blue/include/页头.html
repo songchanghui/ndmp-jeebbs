@@ -7,6 +7,17 @@
        [/#if]
 	 topicTypeTpl= $.format($("#topicTypeTpl").val());
 	})
+    function openUrl(path) {
+        $.post("${base}/post/check.jspx", {
+            "path": path
+        }, function (data) {
+            if (data == '1') {
+                $(window).attr('location', path);
+            } else {
+                showModel1('#login');
+            }
+        });
+    }
 	function getloginTab(that,url) {
 	   $('.login-tab span').each(function(){
 		$(this).removeClass('active');
@@ -14,6 +25,13 @@
        $(that).addClass('active');
 	   $('#loadbox').load(url);
 	}
+    function getRegisterTab(that, url) {
+        $('.login-tab span').each(function () {
+            $(this).removeClass('active');
+        });
+        $(that).addClass('active');
+        $('#loadbox').load(url);
+    }
 	function getloginTabOut() {
 	   $('.login-tab span').each(function(){
 		$(this).removeClass('active');
@@ -112,19 +130,22 @@
                     <a href="/yk/index.jhtml">游客</a>
                 </li>
            <li [#if location?ends_with('/xs/index.jhtml')]class="active"[/#if]>
-                    <a href="/xs/index.jhtml">小说</a>
+                <a href="javascript:openUrl('/xs/index.jhtml')">小说</a>
+                <!--<a href="/xs/index.jhtml">小说</a>-->
                 </li>
                 <li [#if location?ends_with('/zm/index.jhtml')]class="active"[/#if]>
-                    <a href="/zm/index.jhtml">正妹</a>
+                <a href="javascript:openUrl('/zm/index.jhtml')">正妹</a>
                 </li>
                 <li [#if location?ends_with('/yl/index.jhtml')]class="active"[/#if]>
-                    <a href="/yl/index.jhtml">娱乐</a>
+                <!--<a  onclick="checkUrl('yl')">娱乐</a>-->
+                <a href="javascript:openUrl('/yl/index.jhtml')">娱乐</a>
+                <!--<a href="/yl/index.jhtml">娱乐</a>-->
                 </li>
                 <li [#if location?ends_with('/mh/index.jhtml')]class="active"[/#if]>
-                    <a href="/mh/index.jhtml">漫画</a>
+                <a href="javascript:openUrl('/mh/index.jhtml')">漫画</a>
                 </li>
                  <li [#if location?ends_with('/zygx/index.jhtml')]class="active"[/#if]>
-                    <a href="/zygx/index.jhtml">资源</a>
+                <a href="javascript:openUrl('/zygx/index.jhtml')">资源</a>
                 </li>
             </ul>
             <!--功能区-->
@@ -167,7 +188,7 @@
                 [#else]
                 <!--未登录-->
                 <li  class="user-logo">
-                    <a title="登录" class="iconfont icon-denglu" onclick="showModel('#login')"></a>
+                    <a title="登录" class="iconfont icon-denglu" onclick="showLoginModel('#login')"></a>
                 </li>
                 [/#if]
                 [#if user??][#if forum??]
@@ -186,7 +207,7 @@
     </div>
     <div class="login-tab clearfix">
         <span class="pull-left active" id="loginSpan" onclick="getloginTab(this,'${base}/login.jspx')">登录</span>
-		<span class="pull-right"  onclick="getloginTab(this,'${base}/register.jspx')">注册</span>
+        <span class="pull-right" onclick="getRegisterTab(this,'${base}/register.jspx')">注册</span>
     </div>
     <div id="loadbox"></div>
 </div>

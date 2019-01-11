@@ -12,6 +12,23 @@
     $(function() {
     	$("#captchaImg").hide();
     	$("#jvForm").validate();
+		jQuery.validator.addMethod("isMobile", function (value, element) {
+			var length = value.length;
+			var mobile = /^(13[0-9]{9})|(18[0-9]{9})|(14[0-9]{9})|(17[0-9]{9})|(15[0-9]{9})$/;
+			if ((length == 11 && mobile.test(value))) {
+				console.log("--------------");
+				console.log(value);
+				console.log(element);
+				console.log("--------------");
+			}
+			return this.optional(element) || (length == 11 && mobile.test(value));
+		}, "请正确填写手机号码");
+		// 自定义邮箱验证，支持多级域名
+		jQuery.validator.addMethod("checkEmail", function (value, element, params) {
+			var checkEmail = /^[a-z0-9]+([._\\-]*[a-z0-9])*@([a-z0-9]+[-a-z0-9]*[a-z0-9]+.){1,63}[a-z0-9]+$/;
+			return this.optional(element) || (checkEmail.test(value));
+		}, "请正确填写邮箱地址");
+
         $("#submit").click(function () {
 		var options = {
 			url: '${base}/registerAjax.jspx',
@@ -34,6 +51,33 @@
 		$("#tipDiv").hide();
 		$("#captchaImg").prop("src","${base}/captcha.svl");
 		$("#captchaImg").show();
+
+	}
+
+	function getCode(o) {
+		settime(o);
+		var options = {
+			url: '${base}/getCode.jspx',
+			type: 'post',
+			dataType: 'json',
+			data: $("#jvForm").serialize(),
+		};
+		$.ajax(options);
+	}
+	var countdown = 60;
+	function settime(val) {
+		if (countdown == 0) {
+			val.removeAttribute("disabled");
+			val.value = "获取手机验证码";
+			countdown = 60;
+		} else {
+			val.setAttribute("disabled", true);
+			val.value = "重新发送(" + countdown + ")";
+			countdown--;
+			setTimeout(function () {
+				settime(val)
+			}, 1000)
+		}
 	}
 </script>
 <style>
@@ -45,7 +89,9 @@
 	<form id="jvForm" action="${base}/register.jspx" method="post">
 		<div class="login-body">
 			<div class="form-group">
-               <input type="text" id="username" name="username" placeholder="用户名(3~20个字符)" autocomplete="off" class="input login-input" vld="{required:true,rangelength:[3,20],username:true,remote:'username_unique.jspx',messages:{remote:'用户名已存在！'}}"/>
+				<input type="text" id="username" name="username" placeholder="用户名(3~20个字符)" autocomplete="off"
+					   class="input login-input"
+					   vld="{required:true,rangelength:[3,20],username:true,remote:'username_unique.jspx',messages:{remote:'用户名已存在！'}}"/>
 			</div>
 			<div class="form-group">
                 <input type="password" name="password" id="password" placeholder="密码" class="input login-input pwd" />
@@ -58,7 +104,9 @@
                 <i class="eye see-close"></i>
 			</div>
 			<div class="form-group">
-                <input type="text" name="email" placeholder="邮箱" vld="{remote:'email_unique.jspx',messages:{remote:'email已经被使用！'}}" class="input login-input" />
+				<input type="text" name="email" placeholder="邮箱"
+					   vld="{remote:'email_unique.jspx',checkEmail:true,messages:{remote:'email已经被使用！'}}"
+					   class="input login-input"/>
 			</div>
 			<div class="form-group clearfix">
                 <input type="text" name="captcha" id="captcha" placeholder="验证码" vld="{required:true}" class="yz-input" />
@@ -69,7 +117,18 @@
                 <div id="slider_bg"></div>
                 <img  id="captchaImg" onclick="this.src='${base}/captcha.svl?d='+new Date()" class="captchaImg"/>
                 </div>
-                
+
+			</div>
+			<div class="form-group">
+				<input type="text" id="phoneNum" name="phoneNum" placeholder="手机号" autocomplete="off"
+					   class="input login-input"
+					   vld="{required:true,isMobile:true,remote:'checkCode.jspx',messages:{remote:'手机号已存在！'}}"/>
+			</div>
+			<div class="form-group clearfix">
+				<input type="text" name="code" id="code" placeholder="短信验证码" vld="{required:true}" class="yz-input"/>
+				<div class="get-yz">
+					<input type="button" id="getcode" value="获取手机验证码" class="blue-btn" onclick="getCode(this)"/>
+				</div>
 			</div>
 			<div id="registerMsg" style="display:none">注册失败!</div>
 			<div class="form-group">

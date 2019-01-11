@@ -87,7 +87,7 @@
 				<!--详情贴-->
 				<ul class="bbs-content-card">
 					<!--楼主贴-->
-					[@post_page topicId=topic.id createrId=createrId orderBy=orderBy count='2' option='2']
+					[@post_page topicId=topic.id createrId=createrId orderBy=0 count='2' option='2']
 					<li class="first-floor">
 						<!--用户信息-->
 						<div class="user-header clearfix">
@@ -513,8 +513,8 @@
 							$("#moreSpan").html("暂无更多");
 					}
 				}
-				</script>  
-				<a onclick="getContent()" id="moreSpan" [#if tag_pagination.totalPage<=1]disabled="disabled"[/#if] class="more-ask" >更多回复</a>
+				</script>
+				<!--<a onclick="getContent()" id="moreSpan" [#if tag_pagination.totalPage<=1]disabled="disabled"[/#if] class="more-ask" >更多回复</a>-->
 				[/@post_page]
 				<!--回复区-->
 				<div class="reply-box">
@@ -734,6 +734,17 @@
 		</div>
 <script>
 $(function() {
+	window.onscroll = function () {
+		//文档内容实际高度（包括超出视窗的溢出部分）
+		var scrollHeight = Math.max(document.documentElement.scrollHeight, document.body.scrollHeight);
+		//滚动条滚动距离
+		var scrollTop = window.pageYOffset || document.documentElement.scrollTop || document.body.scrollTop;
+		//窗口可视范围高度
+		var clientHeight = window.innerHeight || Math.min(document.documentElement.clientHeight, document.body.clientHeight);
+		if (clientHeight + scrollTop >= scrollHeight) {
+			getContent();
+		}
+	}
 //创建发帖编辑器
    new PnEditor();
     $('.theme-pics').viewer({
