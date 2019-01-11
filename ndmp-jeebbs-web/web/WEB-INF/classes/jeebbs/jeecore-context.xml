@@ -1,10 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<beans xmlns="http://www.springframework.org/schema/beans"
-	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-	xmlns:context="http://www.springframework.org/schema/context"
-	xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd
-	http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context.xsd"
-	default-lazy-init="true">
+<beans xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	   xmlns="http://www.springframework.org/schema/beans"
+	   xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd"
+	   default-lazy-init="true">
 	
 	<!--HttpSession-->
 	<bean id="sessionProvider" class="com.jeecms.common.web.session.HttpSessionProvider"/>
@@ -75,12 +73,12 @@
 	<bean id="bbsConfigDao" class="com.jeecms.core.dao.impl.CmsConfigDaoImpl"/>
 	<bean id="configDao" class="com.jeecms.core.dao.impl.ConfigDaoImpl"/>
 	<bean id="roleDao" class="com.jeecms.core.dao.impl.CmsRoleDaoImpl"/>
-    <!--&lt;!&ndash;短信服务&ndash;&gt;-->
+	<!--&lt;!&ndash;短信服务&ndash;&gt;-->
 	<!--<bean id="jsonReqClient" class="com.ucpaas.client.JsonReqClient">-->
-		<!--<property name="appid" value="684a21cc34724ea7b992d49720562ecf"/>-->
-		<!--<property name="sid" value="0b01aa4bfff8050f7aaa6ba3717e456b" />-->
-		<!--<property name="token" value="5abe9ab333fecfc1d541613b4790b5de" />-->
-		<!--<property name="templateid" value="420580" />-->
+	<!--<property name="appid" value="684a21cc34724ea7b992d49720562ecf"/>-->
+	<!--<property name="sid" value="0b01aa4bfff8050f7aaa6ba3717e456b" />-->
+	<!--<property name="token" value="5abe9ab333fecfc1d541613b4790b5de" />-->
+	<!--<property name="templateid" value="420580" />-->
 	<!--</bean>-->
 	<!--短信服务-->
 	<bean id="messageConfig" class="com.submail.config.MessageConfig">
