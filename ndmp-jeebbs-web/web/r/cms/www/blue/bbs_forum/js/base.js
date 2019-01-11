@@ -60,7 +60,27 @@ $(function () {
 	  }) 
 	
 })
-
+function showLoginModel(select) {
+	var docH = $('body').height();
+	var w = parseInt($(select).width()) / 2;
+	var h = parseInt($(select).height()) * 0.5;
+	$('.cover').remove();
+	$('body').append("<div class='cover'></div>");
+	$('.cover').css('height', docH + 'px');
+	$(select).show().css('margin-left', -w + 'px');
+	$(select).show().css('margin-top', -h + 'px');
+}
+function showModel1(select) {
+	var docH = $('body').height();
+	var w = parseInt($(select).width()) / 2;
+	var h = parseInt($(select).height()) / 2;
+	$('.cover').remove();
+	$('body').append("<div class='cover'></div>");
+	$('.cover').css('height', docH + 'px');
+	$(select).show().css('margin-left', -w + 'px');
+	$(select).show().css('margin-top', -h + 'px');
+	$("#msg").html('该板块需要登录浏览!');
+}
 function showModel(select) {
 	var docH=$('body').height();
 	var w= parseInt($(select).width())/2;
@@ -70,7 +90,7 @@ function showModel(select) {
 	 $('.cover').css('height',docH+'px');
     $(select).show().css('margin-left',-w+'px');
      $(select).show().css('margin-top',-h+'px');
-	 
+	$("#msg").html('');
 }
 
 function closeModel() {
