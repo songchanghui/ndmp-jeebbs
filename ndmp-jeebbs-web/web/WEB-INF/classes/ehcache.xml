@@ -23,5 +23,7 @@
     <cache name="com.jeecms.bbs.shiro.shiroCache" maxElementsInMemory="500" eternal="false" timeToIdleSeconds="1200" overflowToDisk="true" diskPersistent="true"/>
 
     <cache name="com.jeecms.cms.front.ContentOrderTemp" maxElementsInMemory="50000" eternal="false" timeToIdleSeconds="7200" overflowToDisk="true" diskPersistent="true"/>
-    
+    <!--短信验证码缓存-->
+	<cache name="com.sdyc.phone.code" maxElementsInMemory="1000000" eternal="false" timeToLiveSeconds ="300" overflowToDisk="true" diskPersistent="false"/>
+
 </ehcache>

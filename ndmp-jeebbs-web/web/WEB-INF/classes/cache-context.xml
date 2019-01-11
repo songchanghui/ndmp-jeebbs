@@ -141,4 +141,15 @@ default-lazy-init="true">
 		</property>
 		<qualifier value="forumVisitCount"/>
 	</bean>
+
+	<!--主题计数缓存-->
+	<bean id="phoneCode" class="org.springframework.cache.ehcache.EhCacheFactoryBean">
+		<property name="cacheManager">
+			<ref bean="cacheManager"/>
+		</property>
+		<property name="cacheName">
+			<value>com.sdyc.phone.code</value>
+		</property>
+		<qualifier value="phoneCodeCache"/>
+	</bean>
 </beans>

@@ -24,7 +24,7 @@
 		-->
 	<bean id="captchaService" class="com.octo.captcha.service.multitype.GenericManageableCaptchaService">
 		<constructor-arg index="0" ref="imageEngine"/>
-		<constructor-arg type="int" index="1" value="180"/>
+		<constructor-arg type="int" index="1" value="1800"/>
 		<constructor-arg type="int" index="2" value="100000"/>
 		<constructor-arg type="int" index="3" value="75000"/>
 	</bean>

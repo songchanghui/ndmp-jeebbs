@@ -66,6 +66,7 @@
 	<bean id="authenticationMng" class="com.jeecms.core.manager.impl.AuthenticationMngImpl"/>
 	<bean id="dbFileMng" class="com.jeecms.core.manager.impl.DbFileMngImpl"/>
 	<bean id="unifiedUserMng" class="com.jeecms.core.manager.impl.UnifiedUserMngImpl"/>
+
 	<bean id="ftpMng" class="com.jeecms.core.manager.impl.FtpMngImpl"/>
 	<bean id="bbsConfigMng" class="com.jeecms.core.manager.impl.CmsConfigMngImpl"/>
 	<bean id="configMng" class="com.jeecms.core.manager.impl.ConfigMngImpl"/>
@@ -74,4 +75,17 @@
 	<bean id="bbsConfigDao" class="com.jeecms.core.dao.impl.CmsConfigDaoImpl"/>
 	<bean id="configDao" class="com.jeecms.core.dao.impl.ConfigDaoImpl"/>
 	<bean id="roleDao" class="com.jeecms.core.dao.impl.CmsRoleDaoImpl"/>
+    <!--&lt;!&ndash;短信服务&ndash;&gt;-->
+	<!--<bean id="jsonReqClient" class="com.ucpaas.client.JsonReqClient">-->
+		<!--<property name="appid" value="684a21cc34724ea7b992d49720562ecf"/>-->
+		<!--<property name="sid" value="0b01aa4bfff8050f7aaa6ba3717e456b" />-->
+		<!--<property name="token" value="5abe9ab333fecfc1d541613b4790b5de" />-->
+		<!--<property name="templateid" value="420580" />-->
+	<!--</bean>-->
+	<!--短信服务-->
+	<bean id="messageConfig" class="com.submail.config.MessageConfig">
+		<property name="appId" value="31393"/>
+		<property name="appKey" value="9b1a3a76c5efa92f8388cff679a58921"/>
+		<property name="signType" value="1234567"/>
+	</bean>
 </beans>
