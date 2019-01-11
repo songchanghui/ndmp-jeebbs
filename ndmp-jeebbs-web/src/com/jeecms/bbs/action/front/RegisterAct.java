@@ -1,40 +1,8 @@
 package com.jeecms.bbs.action.front;
 
-import static com.jeecms.bbs.Constants.TPLDIR_MEMBER;
-
-import java.io.IOException;
-import java.util.Calendar;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
-
-import org.apache.commons.lang.StringUtils;
-import org.json.JSONException;
-import org.json.JSONObject;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Controller;
-import org.springframework.ui.ModelMap;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestMethod;
-
 import com.jeecms.bbs.cache.BbsConfigEhCache;
-import com.jeecms.bbs.entity.BbsConfig;
-import com.jeecms.bbs.entity.BbsLoginLog;
-import com.jeecms.bbs.entity.BbsUser;
-import com.jeecms.bbs.entity.BbsUserExt;
-import com.jeecms.bbs.entity.BbsUserGroup;
-import com.jeecms.bbs.entity.BbsUserOnline;
-import com.jeecms.bbs.entity.BbsWebservice;
-import com.jeecms.bbs.manager.BbsConfigMng;
-import com.jeecms.bbs.manager.BbsLoginLogMng;
-import com.jeecms.bbs.manager.BbsUserMng;
-import com.jeecms.bbs.manager.BbsUserOnlineMng;
-import com.jeecms.bbs.manager.BbsWebserviceMng;
+import com.jeecms.bbs.entity.*;
+import com.jeecms.bbs.manager.*;
 import com.jeecms.bbs.web.CmsUtils;
 import com.jeecms.bbs.web.FrontUtils;
 import com.jeecms.bbs.web.WebErrors;
@@ -53,6 +21,31 @@ import com.jeecms.core.manager.ConfigMng;
 import com.jeecms.core.manager.UnifiedUserMng;
 import com.octo.captcha.service.CaptchaServiceException;
 import com.octo.captcha.service.image.ImageCaptchaService;
+import com.submail.config.MessageConfig;
+import com.submail.lib.MessageSend;
+import net.sf.ehcache.Ehcache;
+import net.sf.ehcache.Element;
+import org.apache.commons.lang.StringUtils;
+import org.json.JSONException;
+import org.json.JSONObject;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.stereotype.Controller;
+import org.springframework.ui.ModelMap;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestMethod;
+
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+import java.io.IOException;
+import java.util.Calendar;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import static com.jeecms.bbs.Constants.TPLDIR_MEMBER;
 
 /**
  * 前台会员注册Action
@@ -62,15 +55,45 @@ import com.octo.captcha.service.image.ImageCaptchaService;
  */
 @Controller
 public class RegisterAct {
-	private static final Logger log = LoggerFactory
-			.getLogger(RegisterAct.class);
-	
 	public static final String TPL_INDEX = "tpl.index";
 	public static final String REGISTER = "tpl.register";
 	public static final String REGISTER_RESULT = "tpl.registerResult";
 	public static final String REGISTER_ACTIVE_SUCCESS = "tpl.registerActiveSuccess";
 	public static final String LOGIN_INPUT = "tpl.loginInput";
 	public static final short REGISTER_CLOSE=0;
+	private static final Logger log = LoggerFactory.getLogger(RegisterAct.class);
+	private Ehcache phoneCodeCache;
+	@Autowired
+	private MessageConfig messageConfig;
+	@Autowired
+	private UnifiedUserMng unifiedUserMng;
+	@Autowired
+	private BbsUserMng bbsUserMng;
+	@Autowired
+	private SessionProvider session;
+	@Autowired
+	private BbsConfigMng bbsConfigMng;
+	@Autowired
+	private BbsConfigEhCache bbsConfigEhCache;
+	@Autowired
+	private ImageCaptchaService imageCaptchaService;
+	@Autowired
+	private ConfigMng configMng;
+	@Autowired
+	private AuthenticationMng authMng;
+	@Autowired
+	private BbsLoginLogMng bbsLoginMng;
+	@Autowired
+	private BbsUserOnlineMng userOnlineMng;
+	@Autowired
+	private CmsConfigItemMng cmsConfigItemMng;
+	@Autowired
+	private BbsWebserviceMng bbsWebserviceMng;
+
+	@Autowired
+	public void setCache(@Qualifier("phoneCodeCache") Ehcache cache) {
+		this.phoneCodeCache = cache;
+	}
 	
 	@RequestMapping(value = "/register.jspx", method = RequestMethod.GET)
 	public String input(HttpServletRequest request,
@@ -89,15 +112,19 @@ public class RegisterAct {
 	}
 
 	@RequestMapping(value = "/register.jspx", method = RequestMethod.POST)
-	public String submit(String username, String email, String password,
-			BbsUserExt userExt, String captcha, String nextUrl,
-			HttpServletRequest request, HttpServletResponse response,
-			ModelMap model) throws IOException {
+	public String submit(String username, String email, String password, String phoneNum, String code,
+						 BbsUserExt userExt, String captcha, String nextUrl,
+						 HttpServletRequest request, HttpServletResponse response,
+						 ModelMap model) throws IOException {
 		CmsSite site = CmsUtils.getSite(request);
 		BbsConfig config = bbsConfigMng.findById(site.getId());
 		WebErrors errors = validateSubmit(username, email, password, captcha,
 				site, request, response);
-		if (errors.hasErrors()) {
+		boolean flag = true;
+		if (!code.equals(phoneCodeCache.get(phoneNum))) {
+			flag = false;
+		}
+		if (errors.hasErrors() && flag) {
 			return FrontUtils.showError(request, response, model, errors);
 		}
 		// 没有开启会员注册
@@ -125,7 +152,7 @@ public class RegisterAct {
 			} else {
 				boolean succ=true;
 				try {
-					user = bbsUserMng.registerMember(username, email, password, ip,
+					user = bbsUserMng.registerMember(username, email, password, ip, phoneNum,
 							groupId, userExt,attrs, false, sender, msgTpl);
 					model.addAttribute("status", 0);
 				} catch (Exception e) {
@@ -150,7 +177,7 @@ public class RegisterAct {
 				return FrontUtils.getTplPath(request, site,
 						TPLDIR_MEMBER, REGISTER_RESULT);
 			}
-		}else{ 
+		} else {
 			try {
 				user = bbsUserMng.registerMember(username, email, false,password,
 						  ip, groupId, userExt,attrs);
@@ -169,19 +196,77 @@ public class RegisterAct {
 			return "redirect:/";
 		}
 	}
-	
+
+	/**
+	 * @param request
+	 * @param response
+	 * @param model
+	 */
+	@RequestMapping(value = "/getCode.jspx", method = RequestMethod.POST)
+	public void getCode(String phoneNum, HttpServletRequest request, HttpServletResponse response, ModelMap model) {
+		String code = smsCode();
+		MessageSend messageSend = new MessageSend(messageConfig);
+		messageSend.addTo(phoneNum);
+		messageSend.addContent("【101论坛】亲爱的用户,您的短信验证码为: " + code + " (5分钟内有效)");
+		String res = messageSend.send();
+//		String res = "{\"status\":\"success\"}";
+		log.info(">>手机号:{},发送手机验证码:{},返回结果:{}", phoneNum, code, res);
+		if (res != null) {
+			com.alibaba.fastjson.JSONObject json = (com.alibaba.fastjson.JSONObject) com.alibaba.fastjson.JSONObject.parse(res);
+			if (json.get("status").equals("success")) {
+				Element element = new Element(phoneNum, code);
+				phoneCodeCache.put(element);
+			}
+			System.out.println(">>手机号:" + phoneNum + ",发送手机验证码:" + code + ",返回结果:");
+		}
+	}
+
+	//创建验证码
+	public String smsCode() {
+		String random = (int) ((Math.random() * 9 + 1) * 100000) + "";
+		return random;
+	}
+
+	/**
+	 * 验证手机是否已使用
+	 *
+	 * @param request
+	 * @param response
+	 * @param model
+	 */
+	@RequestMapping(value = "/checkCode.jspx")
+	public void checkCode(String phoneNum, HttpServletRequest request, HttpServletResponse response, ModelMap model) {
+		// 手机号为空，返回false。
+		if (StringUtils.isBlank(phoneNum)) {
+			ResponseUtils.renderJson(response, "false");
+			return;
+		}
+		// 用户名存在，返回false。
+		if (unifiedUserMng.phoneNumExist(phoneNum)) {
+			ResponseUtils.renderJson(response, "false");
+			return;
+		}
+		ResponseUtils.renderJson(response, "true");
+	}
+
 	@RequestMapping(value = "/registerAjax.jspx", method = RequestMethod.POST)
-	public void submitAjax(String username, String email, String password,
+	public void submitAjax(String username, String email, String password, String phoneNum ,String code,
 			BbsUserExt userExt, String captcha, String nextUrl,
 			HttpServletRequest request, HttpServletResponse response,
 			ModelMap model) throws IOException {
+		boolean flag = true;
+		if (phoneNum == null || phoneNum.equals("")) {
+			flag = false;
+		} else if (!code.equals(phoneCodeCache.get(phoneNum).getObjectValue())) {
+			flag = false;
+		}
 		JSONObject json=new JSONObject();
 		CmsSite site = CmsUtils.getSite(request);
 		BbsConfig config = bbsConfigMng.findById(site.getId());
 		WebErrors errors = validateSubmit(username, email, password, captcha,
 				site, request, response);
 		try {
-			if (!errors.hasErrors()) {
+			if (!errors.hasErrors()&&flag) {
 				// 没有开启会员注册
 				if (config.getRegisterStatus().equals(REGISTER_CLOSE)) {
 					json.put("status", -2);
@@ -207,7 +292,7 @@ public class RegisterAct {
 						} else {
 							boolean succ=true;
 							try {
-								user = bbsUserMng.registerMember(username, email, password, ip,
+								user = bbsUserMng.registerMember(username, email, password, ip,phoneNum,
 										groupId, userExt,attrs, false, sender, msgTpl);
 								json.put("status", 1);
 							} catch (Exception e) {
@@ -222,10 +307,9 @@ public class RegisterAct {
 							}
 						}
 						log.info("member register success. username={}", username);
-					}else{ 
+					}else{
 						try {
-							user = bbsUserMng.registerMember(username, email, false,password,
-									  ip, groupId, userExt,attrs);
+							user = bbsUserMng.registerMember(username, email, false, password, ip, phoneNum, groupId, userExt,attrs);
 							callWebService(username, password, email, userExt);
 							json.put("status", 1);
 						} catch (Exception e) {
@@ -247,12 +331,12 @@ public class RegisterAct {
 		}
 		ResponseUtils.renderJson(response,json.toString());
 	}
-	
+
 	@RequestMapping(value = "/appregister.jspx")
 	public void appsubmit(String username, String email, String password,
 			HttpServletRequest request, HttpServletResponse response,
 			ModelMap model) throws JSONException {
-		String callback = request.getParameter("callback"); 
+		String callback = request.getParameter("callback");
 		JSONObject json = new JSONObject();
 		CmsSite site = CmsUtils.getSite(request);
 		WebErrors errors = validateSubmit(username, email, password,site, request, response);
@@ -263,9 +347,9 @@ public class RegisterAct {
 			   BbsUserGroup group = bbsConfigMng.findById(site.getId()).getRegisterGroup();
 			    if (group != null) {
 				  groupId = group.getId();
-			    }
-			    BbsUser user = null; 
-			    try {
+				}
+			BbsUser user = null;
+			try {
 			    	BbsUserExt userExt = new BbsUserExt();
 					user = bbsUserMng.registerMember(username, email,false, password,ip, groupId, userExt,attrs);
 			    } catch (Exception e) {
@@ -349,7 +433,7 @@ public class RegisterAct {
 		}
 		ResponseUtils.renderJson(response, "true");
 	}
-	
+
 	@RequestMapping(value = "/username_exist.jspx")
 	public void usernameExist(HttpServletRequest request,
 			HttpServletResponse response) {
@@ -366,8 +450,8 @@ public class RegisterAct {
 		}
 		ResponseUtils.renderJson(response, "false");
 	}
-	
-	private void callWebService(String username,String password,String email,BbsUserExt userExt){
+
+	private void callWebService(String username, String password, String email, BbsUserExt userExt){
 		if(bbsWebserviceMng.hasWebservice(BbsWebservice.SERVICE_TYPE_ADD_USER)){
 			Map<String,String>paramsValues=new HashMap<String, String>();
 			paramsValues.put("username", username);
@@ -393,6 +477,7 @@ public class RegisterAct {
 			HttpServletRequest request, HttpServletResponse response) {
 		WebErrors errors = WebErrors.create(request);
 		try {
+			System.out.println(session.getSessionId(request, response));
 			if (!imageCaptchaService.validateResponseForID(session
 					.getSessionId(request, response), captcha)) {
 				errors.addErrorCode("error.invalidCaptcha");
@@ -417,11 +502,10 @@ public class RegisterAct {
 		}
 		return errors;
 	}
-	
-	
+
 	private WebErrors validateSubmit(String username, String email,
-			String password, CmsSite site,
-			HttpServletRequest request, HttpServletResponse response) {
+									 String password, CmsSite site,
+									 HttpServletRequest request, HttpServletResponse response) {
 		WebErrors errors = WebErrors.create(request);
 		// TODO长度限制应该可配
 		if(errors.ifNotUsername(username, "username", 3, 20)){
@@ -462,31 +546,5 @@ public class RegisterAct {
 		}
 		return errors;
 	}
-	
-
-	@Autowired
-	private UnifiedUserMng unifiedUserMng;
-	@Autowired
-	private BbsUserMng bbsUserMng;
-	@Autowired
-	private SessionProvider session;
-	@Autowired
-	private BbsConfigMng bbsConfigMng;
-	@Autowired
-	private BbsConfigEhCache bbsConfigEhCache;
-	@Autowired
-	private ImageCaptchaService imageCaptchaService;
-	@Autowired
-	private ConfigMng configMng;
-	@Autowired
-	private AuthenticationMng authMng;
-	@Autowired
-	private BbsLoginLogMng bbsLoginMng;
-	@Autowired
-	private BbsUserOnlineMng userOnlineMng;
-	@Autowired
-	private CmsConfigItemMng cmsConfigItemMng;
-	@Autowired
-	private BbsWebserviceMng bbsWebserviceMng;
 
 }

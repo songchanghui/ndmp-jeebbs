@@ -1,11 +1,11 @@
 package com.jeecms.common.web;
 
+import org.apache.commons.lang.StringUtils;
+import org.springframework.util.Assert;
+
 import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
-
-import org.apache.commons.lang.StringUtils;
-import org.springframework.util.Assert;
 
 /**
  * Cookie 辅助类
@@ -69,7 +69,7 @@ public class CookieUtils {
 			}
 		}
 		if (orderBy <= 0) {
-			orderBy = 1;
+			orderBy = 0;
 		}
 		return orderBy;
 	}

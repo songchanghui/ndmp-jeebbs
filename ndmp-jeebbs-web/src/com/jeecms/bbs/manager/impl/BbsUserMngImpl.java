@@ -1,37 +1,8 @@
 package com.jeecms.bbs.manager.impl;
 
-import java.io.UnsupportedEncodingException;
-import java.util.Date;
-import java.util.List;
-import java.util.Map;
-
-import javax.mail.MessagingException;
-
-import org.apache.commons.lang.StringUtils;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-
 import com.jeecms.bbs.dao.BbsUserDao;
-import com.jeecms.bbs.entity.BbsCommonMagic;
-import com.jeecms.bbs.entity.BbsMemberMagic;
-import com.jeecms.bbs.entity.BbsPost;
-import com.jeecms.bbs.entity.BbsUser;
-import com.jeecms.bbs.entity.BbsUserActiveLevel;
-import com.jeecms.bbs.entity.BbsUserExt;
-import com.jeecms.bbs.entity.BbsUserGroup;
-import com.jeecms.bbs.entity.BbsUserOnline;
-import com.jeecms.bbs.manager.BbsCommonMagicMng;
-import com.jeecms.bbs.manager.BbsMemberMagicMng;
-import com.jeecms.bbs.manager.BbsPostMng;
-import com.jeecms.bbs.manager.BbsUserAccountMng;
-import com.jeecms.bbs.manager.BbsUserActiveLevelMng;
-import com.jeecms.bbs.manager.BbsUserExtMng;
-import com.jeecms.bbs.manager.BbsUserGroupMng;
-import com.jeecms.bbs.manager.BbsUserMng;
-import com.jeecms.bbs.manager.BbsUserOnlineMng;
+import com.jeecms.bbs.entity.*;
+import com.jeecms.bbs.manager.*;
 import com.jeecms.common.email.EmailSender;
 import com.jeecms.common.email.MessageTemplate;
 import com.jeecms.common.hibernate4.Updater;
@@ -40,13 +11,46 @@ import com.jeecms.core.entity.UnifiedUser;
 import com.jeecms.core.manager.CmsConfigMng;
 import com.jeecms.core.manager.CmsRoleMng;
 import com.jeecms.core.manager.UnifiedUserMng;
+import org.apache.commons.lang.StringUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import javax.mail.MessagingException;
+import java.io.UnsupportedEncodingException;
+import java.util.Date;
+import java.util.List;
+import java.util.Map;
 
 @Service
 @Transactional
 public class BbsUserMngImpl implements BbsUserMng {
 	private static final Logger log = LoggerFactory
 			.getLogger(BbsUserMngImpl.class);
-	
+	// private CmsSiteMng cmsSiteMng;
+	private BbsUserGroupMng bbsUserGroupMng;
+	private UnifiedUserMng unifiedUserMng;
+	private BbsUserExtMng bbsUserExtMng;
+	private BbsUserDao dao;
+	@Autowired
+	private BbsCommonMagicMng magicMng;
+	@Autowired
+	private BbsMemberMagicMng memberMagicMng;
+	@Autowired
+	private BbsUserOnlineMng bbsUserOnlineMng;
+	@Autowired
+	private CmsConfigMng cmsConfigMng;
+	@Autowired
+	private BbsUserActiveLevelMng bbsUserActiveLevelMng;
+	@Autowired
+	private CmsRoleMng roleMng;
+	@Autowired
+	private BbsPostMng postMng;
+	@Autowired
+	private BbsUserAccountMng userAccountMng;
+
 	public List<BbsUser> getList(String username, Integer groupId,
 			Boolean disabled, Boolean admin,Boolean official,Integer first, Integer count){
 		return dao.getList(username,groupId,disabled,admin,official,first, count);
@@ -62,12 +66,12 @@ public class BbsUserMngImpl implements BbsUserMng {
 				rank,orderBy,pageNo, pageSize);
 		return page;
 	}
-	
+
 	@Transactional(readOnly = true)
 	public Pagination getPageByAttent(Integer attent, Integer userId, int pageNo, int pageSize){
 		return dao.getPageByAttent(attent,userId,pageNo,pageSize);
 	}
-	
+
 	@Transactional(readOnly = true)
 	public List<BbsUser> getListByAttent(Integer attent, Integer userId,
 			Integer first, Integer count){
@@ -78,7 +82,7 @@ public class BbsUserMngImpl implements BbsUserMng {
 	public List<BbsUser> getList(Integer count) {
 		return dao.getList(count);
 	}
-	
+
 	@Transactional(readOnly = true)
 	public List<BbsUser> getAdminList(Integer siteId, Boolean allChannel,
 			Boolean disabled, Integer rank) {
@@ -100,8 +104,38 @@ public class BbsUserMngImpl implements BbsUserMng {
 		return entity;
 	}
 
-	public BbsUser registerMember(String username, String email,Boolean official,
-			String password, String ip, Integer groupId, BbsUserExt userExt,Map<String,String>attr) throws UnsupportedEncodingException, MessagingException {
+	public BbsUser registerMember(String username, String email, Boolean official, String password, String ip, String phonenum, Integer groupId, BbsUserExt userExt, Map<String, String> attr) throws UnsupportedEncodingException, MessagingException {
+		UnifiedUser unifiedUser = unifiedUserMng.save(username, email, password, ip, phonenum);
+		BbsUser user = new BbsUser();
+		user.setPhoneNum(phonenum);
+		user.forMember(unifiedUser);
+		user.setAttr(attr);
+		BbsUserGroup group = null;
+		if (groupId != null) {
+			group = bbsUserGroupMng.findById(groupId);
+		} else {
+			group = bbsUserGroupMng.getRegDef();
+		}
+		if (group == null) {
+			throw new RuntimeException("register default member group not found!");
+		}
+		Integer defaultActiveLevel = cmsConfigMng.get().getDefaultActiveLevel();
+		user.setActiveLevel(bbsUserActiveLevelMng.findById(defaultActiveLevel));
+		if (official != null) {
+			user.setOfficial(official);
+		} else {
+			user.setOfficial(false);
+		}
+		user.setGroup(group);
+		user.init();
+		user = dao.save(user);
+		bbsUserExtMng.save(userExt, user);
+		bbsUserOnlineMng.saveByUser(user);
+		userAccountMng.updateAccountInfo(null, null, (short) 0, user);
+		return user;
+	}
+
+	public BbsUser registerMember(String username, String email, Boolean official, String password, String ip, Integer groupId, BbsUserExt userExt, Map<String, String> attr) throws UnsupportedEncodingException, MessagingException {
 		UnifiedUser unifiedUser = unifiedUserMng.save(username, email,
 				password, ip);
 		BbsUser user = new BbsUser();
@@ -176,6 +210,46 @@ public class BbsUserMngImpl implements BbsUserMng {
 		return user;
 	}
 
+	public BbsUser registerMember(String username, String email, String password, String ip, String phoneNum, Integer groupId, BbsUserExt userExt, Map<String, String> attr, Boolean activation, EmailSender sender, MessageTemplate msgTpl) throws UnsupportedEncodingException, MessagingException {
+		String uuid = "";
+		boolean emailSendSucc = true;
+		try {
+			uuid = unifiedUserMng.sendEmail(username, email, activation, sender, msgTpl);
+		} catch (UnsupportedEncodingException e) {
+			emailSendSucc = false;
+			log.error(e.getMessage());
+			throw e;
+		} catch (MessagingException e) {
+			emailSendSucc = false;
+			log.error(e.getMessage());
+			throw e;
+		}
+		BbsUser user = new BbsUser();
+		if (emailSendSucc) {
+			UnifiedUser unifiedUser = unifiedUserMng.save(username, email, password, ip, activation, uuid, phoneNum);
+			user.forMember(unifiedUser);
+			user.setAttr(attr);
+			user.setPhoneNum(phoneNum);
+			BbsUserGroup group = null;
+			if (groupId != null) {
+				group = bbsUserGroupMng.findById(groupId);
+			} else {
+				group = bbsUserGroupMng.getRegDef();
+			}
+			if (group == null) {
+				throw new RuntimeException("register default member group not found!");
+			}
+			Integer defaultActiveLevel = cmsConfigMng.get().getDefaultActiveLevel();
+			user.setActiveLevel(bbsUserActiveLevelMng.findById(defaultActiveLevel));
+			user.setGroup(group);
+			user.init();
+			user = dao.save(user);
+			bbsUserExtMng.save(userExt, user);
+			userAccountMng.updateAccountInfo(null, null, (short) 0, user);
+		}
+		return user;
+	}
+
 	public void updateLoginInfo(Integer userId, String ip,Date loginTime,String sessionId) {
 		BbsUser user = findById(userId);
 		if (user != null) {
@@ -215,7 +289,7 @@ public class BbsUserMngImpl implements BbsUserMng {
 		}
 		unifiedUserMng.update(id, password, email);
 	}
-	
+
 	public void updateGroup(Integer id, Integer groupId){
 		BbsUser user = findById(id);
 		user.setGroup(bbsUserGroupMng.findById(groupId));
@@ -341,7 +415,7 @@ public class BbsUserMngImpl implements BbsUserMng {
 	public List<BbsUser> getSuggestMember(String username, Integer count) {
 		return dao.getSuggestMember(username, count);
 	}
-	
+
 	public void updateActiveLevel(){
 		List<BbsUserActiveLevel>levels=bbsUserActiveLevelMng.getList(Integer.MAX_VALUE);
 		List<BbsUser>users=getList(Integer.MAX_VALUE);
@@ -350,7 +424,7 @@ public class BbsUserMngImpl implements BbsUserMng {
 			dao.updateActiveLevel(u, l);
 		}
 	}
-	
+
 	private BbsUserActiveLevel getUpdateToLevel(BbsUser user,List<BbsUserActiveLevel>levels){
 		if(levels!=null&&levels.size()>0){
 			BbsUserActiveLevel level=levels.get(0);
@@ -446,7 +520,7 @@ public class BbsUserMngImpl implements BbsUserMng {
 
 		}
 	}
-	
+
 	public int attentUser(Integer userId,Integer attentUserId,Integer operate){
 		int status=-1;
 		BbsUser user=findById(userId);
@@ -466,15 +540,15 @@ public class BbsUserMngImpl implements BbsUserMng {
 		}
 		return status;
 	}
-	
+
 	public BbsUser update(BbsUser bean) {
 		Updater<BbsUser> updater = new Updater<BbsUser>(bean);
 		bean = dao.updateByUpdater(updater);
 		return bean;
 	}
-	
+
 	public BbsUser forbidUser(Integer siteId,BbsUser user,boolean disabled){
-		List<BbsPost>posts=postMng.getListForTag(siteId, 
+		List<BbsPost> posts = postMng.getListForTag(siteId,
 				null, null, user.getId(), null, BbsPost.OPT_ALL,0,0, Integer.MAX_VALUE);
 		if(disabled){
 			for(BbsPost p:posts){
@@ -490,29 +564,6 @@ public class BbsUserMngImpl implements BbsUserMng {
 		user.setDisabled(disabled);
 		return update(user);
 	}
-	
-
-	// private CmsSiteMng cmsSiteMng;
-	private BbsUserGroupMng bbsUserGroupMng;
-	private UnifiedUserMng unifiedUserMng;
-	private BbsUserExtMng bbsUserExtMng;
-	private BbsUserDao dao;
-	@Autowired
-	private BbsCommonMagicMng magicMng;
-	@Autowired
-	private BbsMemberMagicMng memberMagicMng;
-	@Autowired
-	private BbsUserOnlineMng bbsUserOnlineMng;
-	@Autowired
-	private CmsConfigMng cmsConfigMng;
-	@Autowired
-	private BbsUserActiveLevelMng bbsUserActiveLevelMng;
-	@Autowired
-	private CmsRoleMng roleMng;
-	@Autowired
-	private BbsPostMng postMng;
-	@Autowired
-	private BbsUserAccountMng userAccountMng;
 
 	// @Autowired
 	// public void setCmsSiteMng(CmsSiteMng cmsSiteMng) {

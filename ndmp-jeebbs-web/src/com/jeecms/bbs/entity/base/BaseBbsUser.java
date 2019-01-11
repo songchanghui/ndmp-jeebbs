@@ -43,64 +43,10 @@ public abstract class BaseBbsUser implements Serializable {
 	public static String PROP_USERNAME = "username";
 	public static String PROP_LAST_POST_TIME = "lastPostTime";
 	public static String PROP_READONLY = "readOnly";
-
-	// constructors
-	public BaseBbsUser() {
-		initialize();
-	}
-
-	/**
-	 * Constructor for primary key
-	 */
-	public BaseBbsUser(java.lang.Integer id) {
-		this.setId(id);
-		initialize();
-	}
-
-	/**
-	 * Constructor for required fields
-	 */
-	public BaseBbsUser(java.lang.Integer id,
-			com.jeecms.bbs.entity.BbsUserGroup group,
-			java.lang.String username, java.util.Date registerTime,
-			java.lang.String registerIp, java.lang.Integer loginCount,
-			java.lang.Long uploadTotal, java.lang.Integer uploadToday,
-			java.lang.Integer uploadSize, java.lang.Boolean admin,
-			java.lang.Boolean disabled, java.lang.Long point,
-			java.lang.Short avatarType, java.lang.Integer topicCount,
-			java.lang.Integer replyCount, java.lang.Integer primeCount,
-			java.lang.Integer postToday, java.lang.Short prohibitPost,java.lang.Boolean readOnly) {
-
-		this.setId(id);
-		this.setGroup(group);
-		this.setUsername(username);
-		this.setRegisterTime(registerTime);
-		this.setRegisterIp(registerIp);
-		this.setLoginCount(loginCount);
-		this.setUploadTotal(uploadTotal);
-		this.setUploadToday(uploadToday);
-		this.setUploadSize(uploadSize);
-		this.setAdmin(admin);
-		this.setDisabled(disabled);
-		this.setPoint(point);
-		this.setAvatarType(avatarType);
-		this.setTopicCount(topicCount);
-		this.setReplyCount(replyCount);
-		this.setPrimeCount(primeCount);
-		this.setPostToday(postToday);
-		this.setProhibitPost(prohibitPost);
-		this.setReadOnly(readOnly);
-		initialize();
-	}
-
-	protected void initialize() {
-	}
-
+	public static String PHONE_NUMBER = "phoneNum";
 	private int hashCode = Integer.MIN_VALUE;
-
 	// primary key
 	private java.lang.Integer id;
-
 	// fields
 	private java.lang.String username;
 	private java.lang.String email;
@@ -135,25 +81,19 @@ public abstract class BaseBbsUser implements Serializable {
 	private java.lang.Boolean liveHost;
 	private java.lang.Integer rank;
 	private java.lang.Long totalPoint;
-	
 	//新增只读
 	private java.lang.Boolean readOnly;
-
 	// one to one
 	private com.jeecms.bbs.entity.BbsUserOnline userOnline;
-
 	// many to one
 	private com.jeecms.bbs.entity.BbsUserGroup group;
-	
 	private com.jeecms.bbs.entity.BbsUserActiveLevel activeLevel;
-
 	// collections
 	private java.util.Map<java.lang.String, java.lang.String> attr;
 	private java.util.Set<com.jeecms.bbs.entity.BbsUserExt> userExtSet;
 	private java.util.Set<com.jeecms.core.entity.CmsRole> roles;
 	private java.util.Set<com.jeecms.bbs.entity.BbsLoginLog> loginLogs;
 	private java.util.Set<com.jeecms.bbs.entity.BbsMemberMagic> memberMagics;
-	
 	private java.util.Set<com.jeecms.bbs.entity.BbsOperation> operations;
 	private java.util.Set<com.jeecms.bbs.entity.BbsSession> sessions;
 	private java.util.Set<com.jeecms.bbs.entity.BbsFriendShip> myFriends;
@@ -166,6 +106,50 @@ public abstract class BaseBbsUser implements Serializable {
 	private java.util.Set<com.jeecms.bbs.entity.BbsUser> myAttentions;
 	private java.util.Set<com.jeecms.bbs.entity.BbsUser> myFans;
 	private java.util.Set<com.jeecms.bbs.entity.BbsGiftUser> gifts;
+	private java.lang.String phoneNum;
+
+	// constructors
+	public BaseBbsUser() {
+		initialize();
+	}
+
+	/**
+	 * Constructor for primary key
+	 */
+	public BaseBbsUser(java.lang.Integer id) {
+		this.setId(id);
+		initialize();
+	}
+
+	/**
+	 * Constructor for required fields
+	 */
+	public BaseBbsUser(java.lang.Integer id, com.jeecms.bbs.entity.BbsUserGroup group, java.lang.String username, java.util.Date registerTime, java.lang.String registerIp, java.lang.Integer loginCount, java.lang.Long uploadTotal, java.lang.Integer uploadToday, java.lang.Integer uploadSize, java.lang.Boolean admin, java.lang.Boolean disabled, java.lang.Long point, java.lang.Short avatarType, java.lang.Integer topicCount, java.lang.Integer replyCount, java.lang.Integer primeCount, java.lang.Integer postToday, java.lang.Short prohibitPost, java.lang.Boolean readOnly) {
+
+		this.setId(id);
+		this.setGroup(group);
+		this.setUsername(username);
+		this.setRegisterTime(registerTime);
+		this.setRegisterIp(registerIp);
+		this.setLoginCount(loginCount);
+		this.setUploadTotal(uploadTotal);
+		this.setUploadToday(uploadToday);
+		this.setUploadSize(uploadSize);
+		this.setAdmin(admin);
+		this.setDisabled(disabled);
+		this.setPoint(point);
+		this.setAvatarType(avatarType);
+		this.setTopicCount(topicCount);
+		this.setReplyCount(replyCount);
+		this.setPrimeCount(primeCount);
+		this.setPostToday(postToday);
+		this.setProhibitPost(prohibitPost);
+		this.setReadOnly(readOnly);
+		initialize();
+	}
+
+	protected void initialize() {
+	}
 
 	/**
 	 * Return the unique identifier of this class
@@ -685,6 +669,14 @@ public abstract class BaseBbsUser implements Serializable {
 
 	public void setTotalPoint(java.lang.Long totalPoint) {
 		this.totalPoint = totalPoint;
+	}
+
+	public String getPhoneNum() {
+		return phoneNum;
+	}
+
+	public void setPhoneNum(String phoneNum) {
+		this.phoneNum = phoneNum;
 	}
 
 	public com.jeecms.bbs.entity.BbsUserOnline getUserOnline() {

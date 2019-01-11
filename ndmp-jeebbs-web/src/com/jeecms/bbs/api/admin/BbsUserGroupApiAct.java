@@ -1,25 +1,5 @@
 package com.jeecms.bbs.api.admin;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.Map.Entry;
-import java.util.Set;
-
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
-
-import org.apache.commons.lang.StringUtils;
-import org.json.JSONArray;
-import org.json.JSONException;
-import org.json.JSONObject;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Controller;
-import org.springframework.ui.ModelMap;
-import org.springframework.web.bind.annotation.RequestMapping;
-
 import com.jeecms.bbs.api.ApiResponse;
 import com.jeecms.bbs.api.ApiValidate;
 import com.jeecms.bbs.api.Constants;
@@ -35,6 +15,25 @@ import com.jeecms.common.web.RequestUtils;
 import com.jeecms.common.web.ResponseUtils;
 import com.jeecms.core.entity.CmsSite;
 import com.jeecms.core.web.WebErrors;
+import org.apache.commons.collections.map.HashedMap;
+import org.apache.commons.lang.StringUtils;
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Controller;
+import org.springframework.ui.ModelMap;
+import org.springframework.web.bind.annotation.RequestMapping;
+
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
+import java.util.Set;
 
 @Controller
 public class BbsUserGroupApiAct {
@@ -330,6 +329,10 @@ public class BbsUserGroupApiAct {
 	 * @return
 	 */
 	private BbsUserGroup systemPerms(BbsUserGroup bean){
+		boolean flag = true;
+		if (bean.getPerms() == null) {
+			bean.setPerms(new HashedMap());
+		}
 		if (!bean.getPerms().containsKey("super_moderator")) {
 			bean.getPerms().put("super_moderator", "false");
 		}

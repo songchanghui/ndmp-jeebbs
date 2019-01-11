@@ -1,14 +1,17 @@
 package com.jeecms.core.manager.impl;
 
-import java.io.UnsupportedEncodingException;
-import java.sql.Timestamp;
-import java.util.Date;
-import java.util.List;
-import java.util.UUID;
-
-import javax.mail.MessagingException;
-import javax.mail.internet.MimeMessage;
-
+import com.jeecms.common.email.EmailSendTool;
+import com.jeecms.common.email.EmailSender;
+import com.jeecms.common.email.MessageTemplate;
+import com.jeecms.common.page.Pagination;
+import com.jeecms.common.security.BadCredentialsException;
+import com.jeecms.common.security.UsernameNotFoundException;
+import com.jeecms.common.security.encoder.PwdEncoder;
+import com.jeecms.core.dao.UnifiedUserDao;
+import com.jeecms.core.entity.Config.ConfigLogin;
+import com.jeecms.core.entity.UnifiedUser;
+import com.jeecms.core.manager.ConfigMng;
+import com.jeecms.core.manager.UnifiedUserMng;
 import org.apache.commons.lang.RandomStringUtils;
 import org.apache.commons.lang.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -18,22 +21,22 @@ import org.springframework.mail.javamail.MimeMessagePreparator;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import com.jeecms.common.email.EmailSendTool;
-import com.jeecms.common.email.EmailSender;
-import com.jeecms.common.email.MessageTemplate;
-import com.jeecms.common.page.Pagination;
-import com.jeecms.common.security.BadCredentialsException;
-import com.jeecms.common.security.UsernameNotFoundException;
-import com.jeecms.common.security.encoder.PwdEncoder;
-import com.jeecms.core.dao.UnifiedUserDao;
-import com.jeecms.core.entity.UnifiedUser;
-import com.jeecms.core.entity.Config.ConfigLogin;
-import com.jeecms.core.manager.ConfigMng;
-import com.jeecms.core.manager.UnifiedUserMng;
+import javax.mail.MessagingException;
+import javax.mail.internet.MimeMessage;
+import java.io.UnsupportedEncodingException;
+import java.sql.Timestamp;
+import java.util.Date;
+import java.util.List;
+import java.util.UUID;
 
 @Service
 @Transactional
 public class UnifiedUserMngImpl implements UnifiedUserMng {
+	private PwdEncoder pwdEncoder;
+	private UnifiedUserDao dao;
+	@Autowired
+	private ConfigMng configMng;
+
 	public UnifiedUser passwordForgotten(Integer userId, EmailSender email,
 			MessageTemplate tpl) {
 		UnifiedUser user = findById(userId);
@@ -84,7 +87,7 @@ public class UnifiedUserMngImpl implements UnifiedUserMng {
 		sendEmail.send();
 		*/
 	}
-	
+
 	private void senderEmail(final String username, final String to,
 			final String activationCode, final EmailSender email,
 			final MessageTemplate tpl)throws UnsupportedEncodingException, MessagingException {
@@ -142,7 +145,7 @@ public class UnifiedUserMngImpl implements UnifiedUserMng {
 		updateLoginInfo(user.getId(), ip);
 		return user;
 	}
-	
+
 	public UnifiedUser applogin(String username, String password, String ip)
 			throws UsernameNotFoundException, BadCredentialsException {
 		UnifiedUser user = getByUsername(username);
@@ -158,7 +161,7 @@ public class UnifiedUserMngImpl implements UnifiedUserMng {
 		updateLoginInfo(user.getId(), ip);
 		return user;
 	}
-	
+
 	/**
 	 * cookie中存放的password为密文
 	 */
@@ -192,12 +195,21 @@ public class UnifiedUserMngImpl implements UnifiedUserMng {
 		return getByUsername(username) != null;
 	}
 
+	@Override
+	public boolean phoneNumExist(String phoneNum) {
+		return getByPhoneNum(phoneNum) != null;
+	}
+
 	public boolean emailExist(String email) {
 		return dao.countByEmail(email) > 0;
 	}
 
 	public UnifiedUser getByUsername(String username) {
 		return dao.getByUsername(username);
+	}
+
+	public UnifiedUser getByPhoneNum(String phoneNum) {
+		return dao.getByPhoneNum(phoneNum);
 	}
 
 	public List<UnifiedUser> getByEmail(String email) {
@@ -220,6 +232,10 @@ public class UnifiedUserMngImpl implements UnifiedUserMng {
 			String ip) throws UnsupportedEncodingException, MessagingException {
 		return save(username, email, password, ip, true,null);
 	}
+
+	public UnifiedUser save(String username, String email, String password, String ip, String phonenum) throws UnsupportedEncodingException, MessagingException {
+		return save(username, email, password, ip, true, null, phonenum);
+	}
 	
 	public UnifiedUser save(String username, String email, String password,
 			String ip, Boolean activation,String uuid) {
@@ -241,7 +257,49 @@ public class UnifiedUserMngImpl implements UnifiedUserMng {
 		}
 		return user;
 	}
-	
+
+	public UnifiedUser save(String username, String email, String password, String ip, Boolean activation, String uuid, String phoneNum) {
+		Date now = new Timestamp(System.currentTimeMillis());
+		UnifiedUser user = new UnifiedUser();
+		user.setUsername(username);
+		user.setEmail(email);
+		user.setPassword(pwdEncoder.encodePassword(password));
+		user.setRegisterIp(ip);
+		user.setRegisterTime(now);
+		user.setLastLoginIp(ip);
+		user.setLastLoginTime(now);
+		user.setLoginCount(0);
+		user.setActivation(activation);
+		user.setErrorCount(0);
+		user.setPhoneNum(phoneNum);
+		dao.save(user);
+		if (!activation) {
+			user.setActivationCode(uuid);
+		}
+		return user;
+	}
+
+	public UnifiedUser save(String username, String email, String password, String phoneNum, String ip, Boolean activation, String uuid) {
+		Date now = new Timestamp(System.currentTimeMillis());
+		UnifiedUser user = new UnifiedUser();
+		user.setUsername(username);
+		user.setEmail(email);
+		user.setPassword(pwdEncoder.encodePassword(password));
+		user.setRegisterIp(ip);
+		user.setRegisterTime(now);
+		user.setLastLoginIp(ip);
+		user.setLastLoginTime(now);
+		user.setLoginCount(0);
+		user.setActivation(activation);
+		user.setErrorCount(0);
+		user.setPhoneNum(phoneNum);
+		dao.save(user);
+		if (!activation) {
+			user.setActivationCode(uuid);
+		}
+		return user;
+	}
+
 	public String sendEmail(String username, String email,
 			Boolean activation, EmailSender sender,
 			MessageTemplate msgTpl) throws UnsupportedEncodingException, MessagingException {
@@ -297,18 +355,19 @@ public class UnifiedUserMngImpl implements UnifiedUserMng {
 		updateLoginSuccess(user.getId(), ip);
 		return user;
 	}
+
 	public void updateLoginSuccess(Integer userId, String ip) {
 		UnifiedUser user = findById(userId);
 		Date now = new Timestamp(System.currentTimeMillis());
 		user.setLoginCount(user.getLoginCount() + 1);
 		user.setLastLoginIp(ip);
 		user.setLastLoginTime(now);
-		
+
 		user.setErrorCount(0);
 		user.setErrorTime(null);
 		user.setErrorIp(null);
 	}
-	
+
 	public void updateLoginError(Integer userId, String ip) {
 		UnifiedUser user = findById(userId);
 		Date now = new Timestamp(System.currentTimeMillis());
@@ -326,11 +385,6 @@ public class UnifiedUserMngImpl implements UnifiedUserMng {
 			user.setErrorCount(user.getErrorCount() + 1);
 		}
 	}
-	
-	private PwdEncoder pwdEncoder;
-	private UnifiedUserDao dao;
-	@Autowired
-	private ConfigMng configMng;
 
 	@Autowired
 	public void setPwdEncoder(PwdEncoder pwdEncoder) {

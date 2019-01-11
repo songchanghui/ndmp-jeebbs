@@ -1,20 +1,19 @@
 package com.jeecms.bbs.dao.impl;
 
-import java.sql.Date;
-import java.util.Calendar;
-import java.util.List;
-
-import org.apache.commons.lang.StringUtils;
-import org.hibernate.Criteria;
-import org.hibernate.Query;
-import org.springframework.stereotype.Repository;
-
 import com.jeecms.bbs.dao.BbsTopicDao;
 import com.jeecms.bbs.entity.BbsTopic;
 import com.jeecms.bbs.entity.BbsTopicCountEnum;
 import com.jeecms.common.hibernate4.Finder;
 import com.jeecms.common.hibernate4.HibernateBaseDao;
 import com.jeecms.common.page.Pagination;
+import org.apache.commons.lang.StringUtils;
+import org.hibernate.Criteria;
+import org.hibernate.Query;
+import org.springframework.stereotype.Repository;
+
+import java.sql.Date;
+import java.util.Calendar;
+import java.util.List;
 
 @Repository
 public class BbsTopicDaoImpl extends HibernateBaseDao<BbsTopic, Integer>
@@ -276,7 +275,7 @@ public class BbsTopicDaoImpl extends HibernateBaseDao<BbsTopic, Integer>
 	
 	@SuppressWarnings("unchecked")
 	public List<BbsTopic> getNewList(Short topLevel,Integer first,Integer count,Integer orderby) {
-		String hql = "from BbsTopic bean where bean.checkStatus=true ";
+		String hql = "from BbsTopic bean where bean.checkStatus=1 ";
 		if(topLevel!=null){
 			hql+=(" and  bean.topLevel>="+topLevel);
 		}

@@ -1,13 +1,15 @@
 package com.jeecms.core.dao;
 
-import java.util.List;
-
 import com.jeecms.common.hibernate4.Updater;
 import com.jeecms.common.page.Pagination;
 import com.jeecms.core.entity.UnifiedUser;
 
+import java.util.List;
+
 public interface UnifiedUserDao {
 	public UnifiedUser getByUsername(String username);
+
+	public UnifiedUser getByPhoneNum(String phoneNum);
 
 	public List<UnifiedUser> getByEmail(String email);
 

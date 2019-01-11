@@ -1,14 +1,16 @@
 package com.jeecms.bbs.action.front;
 
-import static com.jeecms.bbs.Constants.TPLDIR_FORUM;
-import static com.jeecms.bbs.Constants.TPLDIR_INDEX;
-import static com.jeecms.common.web.Constants.INDEX;
-
-import java.io.IOException;
-
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
-
+import com.jeecms.bbs.cache.ForumCountCache;
+import com.jeecms.bbs.cache.TopicCountEhCache;
+import com.jeecms.bbs.entity.*;
+import com.jeecms.bbs.manager.*;
+import com.jeecms.bbs.web.CmsUtils;
+import com.jeecms.bbs.web.FrontUtils;
+import com.jeecms.common.web.CookieUtils;
+import com.jeecms.common.web.session.SessionProvider;
+import com.jeecms.common.web.springmvc.MessageResolver;
+import com.jeecms.core.entity.CmsSite;
+import com.jeecms.core.web.front.URLHelper;
 import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -18,31 +20,16 @@ import org.springframework.ui.ModelMap;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
 
-import com.jeecms.bbs.cache.ForumCountCache;
-import com.jeecms.bbs.cache.TopicCountEhCache;
-import com.jeecms.bbs.entity.BbsForum;
-import com.jeecms.bbs.entity.BbsPostType;
-import com.jeecms.bbs.entity.BbsTopic;
-import com.jeecms.bbs.entity.BbsUser;
-import com.jeecms.bbs.entity.BbsUserGroup;
-import com.jeecms.bbs.manager.BbsConfigMng;
-import com.jeecms.bbs.manager.BbsForumMng;
-import com.jeecms.bbs.manager.BbsOrderMng;
-import com.jeecms.bbs.manager.BbsPostTypeMng;
-import com.jeecms.bbs.manager.BbsTopicMng;
-import com.jeecms.bbs.web.CmsUtils;
-import com.jeecms.bbs.web.FrontUtils;
-import com.jeecms.common.web.CookieUtils;
-import com.jeecms.common.web.session.SessionProvider;
-import com.jeecms.common.web.springmvc.MessageResolver;
-import com.jeecms.core.entity.CmsSite;
-import com.jeecms.core.web.front.URLHelper;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+import java.io.IOException;
+
+import static com.jeecms.bbs.Constants.*;
+import static com.jeecms.common.web.Constants.INDEX;
+import static com.jeecms.common.web.ResponseUtils.render;
 
 @Controller
 public class DynamicPageAct {
-	private static final Logger log = LoggerFactory
-			.getLogger(DynamicPageAct.class);
-
 	public static final String TPL_INDEX = "tpl.index";
 	public static final String TPL_INDEX_MODERATOR = "tpl.indexModerator";
 	public static final String TPL_INDEX_RECOMMEND = "tpl.indexRecommend";
@@ -53,7 +40,24 @@ public class DynamicPageAct {
 	public static final String LOGIN_INPUT = "tpl.loginInput";
 	public static final int TOPIC_ALL = 0;
 	public static final int TOPIC_ESSENCE = 1;
-	
+	private static final Logger log = LoggerFactory.getLogger(DynamicPageAct.class);
+	@Autowired
+	private BbsTopicMng bbsTopicMng;
+	@Autowired
+	private BbsForumMng bbsForumMng;
+	@Autowired
+	private BbsConfigMng bbsConfigMng;
+	@Autowired
+	private TopicCountEhCache topicCountEhCache;
+	@Autowired
+	private BbsPostTypeMng bbsPostTypeMng;
+	@Autowired
+	private SessionProvider session;
+	@Autowired
+	private BbsOrderMng orderMng;
+	@Autowired
+	private ForumCountCache forumCountCache;
+
 	@RequestMapping(value = "/", method = RequestMethod.GET)
 	public String index(HttpServletRequest request, ModelMap model,HttpServletResponse response) {
 		CmsSite site = CmsUtils.getSite(request);
@@ -63,10 +67,10 @@ public class DynamicPageAct {
 		return FrontUtils.getTplPath(request, site,
 				TPLDIR_INDEX, TPL_INDEX);
 	}
-	
+
 	/**
 	 * WEBLOGIC的默认路径
-	 * 
+	 *
 	 * @param request
 	 * @param model
 	 * @return
@@ -75,7 +79,7 @@ public class DynamicPageAct {
 	public String indexForWeblogic(HttpServletRequest request, ModelMap model,HttpServletResponse response) {
 		return index(request, model,response);
 	}
-	
+
 	@RequestMapping(value = "/indexModerator*.jhtml", method = RequestMethod.GET)
 	public String indexForModerator(HttpServletRequest request, ModelMap model,HttpServletResponse response) {
 		CmsSite site = CmsUtils.getSite(request);
@@ -84,7 +88,7 @@ public class DynamicPageAct {
 		return FrontUtils.getTplPath(request, site,
 				TPLDIR_INDEX, TPL_INDEX_MODERATOR);
 	}
-	
+
 	@RequestMapping(value = "/indexRecommend*.jhtml", method = RequestMethod.GET)
 	public String indexRecommend(HttpServletRequest request, ModelMap model,HttpServletResponse response) {
 		CmsSite site = CmsUtils.getSite(request);
@@ -92,6 +96,16 @@ public class DynamicPageAct {
 		FrontUtils.frontPageData(request, model);
 		return FrontUtils.getTplPath(request, site,
 				TPLDIR_INDEX, TPL_INDEX_RECOMMEND);
+	}
+
+	@RequestMapping(value = "/post/check.jspx")
+	public void checkPath(HttpServletRequest request, ModelMap model, HttpServletResponse response) {
+		CmsSite site = CmsUtils.getSite(request);
+		BbsUser user = CmsUtils.getUser(request);
+		String path = request.getParameter("path").split("/")[1];
+		BbsForum forum = bbsForumMng.getByPath(site.getId(), path);
+		boolean check = checkView(forum, user, site);
+		render(response, "text/plain;charset=UTF-8", check ? "1" : "0");
 	}
 
 	@RequestMapping(value = "/**/*.*", method = RequestMethod.GET)
@@ -113,7 +127,7 @@ public class DynamicPageAct {
 				}
 			}
 		}
-		
+
 		if("index_jing".equals(address)){
 			return forum(paths[0], null,request, response, model,"index_jing",ty);
 		}
@@ -142,7 +156,7 @@ public class DynamicPageAct {
 			return FrontUtils.pageNotFound(request, response, model);
 		}
 	}
-	
+
 	private String forum(String path,String typeId,
 			HttpServletRequest request,
 			HttpServletResponse response, ModelMap model,String type,String ty) {
@@ -153,8 +167,7 @@ public class DynamicPageAct {
 		boolean check = checkView(forum, user, site);
 		if (!check) {
 			model.put("msg",MessageResolver.getMessage(request, "member.hasnopermission"));
-			return FrontUtils.getTplPath(request, site,
-					TPLDIR_FORUM, TPL_NO_VIEW);
+			return FrontUtils.getTplPath(request, site, TPLDIR_MEMBER, TPL_NO_VIEW);
 		}
 		model.put("manager", checkManager(forum, user, site));
 		model.put("uptop", checkUpTop(forum, user, site));
@@ -203,7 +216,7 @@ public class DynamicPageAct {
 		if(topic!=null){
 			forum=topic.getForum();
 		}else{
-			return FrontUtils.pageNotFound(request, response, model); 
+			return FrontUtils.pageNotFound(request, response, model);
 		}
 		boolean check = checkView(forum, user, site);
 		if (!check) {
@@ -359,22 +372,5 @@ public class DynamicPageAct {
 		}
 		return true;
 	}
-
-	@Autowired
-	private BbsTopicMng bbsTopicMng;
-	@Autowired
-	private BbsForumMng bbsForumMng;
-	@Autowired
-	private BbsConfigMng bbsConfigMng;
-	@Autowired
-	private TopicCountEhCache topicCountEhCache;
-	@Autowired
-	private BbsPostTypeMng bbsPostTypeMng;
-	@Autowired
-	private SessionProvider session;
-	@Autowired
-	private BbsOrderMng orderMng;
-	@Autowired
-	private ForumCountCache forumCountCache;
 
 }

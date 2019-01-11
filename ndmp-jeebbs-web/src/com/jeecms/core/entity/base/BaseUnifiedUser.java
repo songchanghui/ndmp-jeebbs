@@ -26,50 +26,10 @@ public abstract class BaseUnifiedUser  implements Serializable {
 	public static String PROP_ID = "id";
 	public static String PROP_REGISTER_IP = "registerIp";
 	public static String PROP_USERNAME = "username";
-
-
-	// constructors
-	public BaseUnifiedUser () {
-		initialize();
-	}
-
-	/**
-	 * Constructor for primary key
-	 */
-	public BaseUnifiedUser (java.lang.Integer id) {
-		this.setId(id);
-		initialize();
-	}
-
-	/**
-	 * Constructor for required fields
-	 */
-	public BaseUnifiedUser (
-		java.lang.Integer id,
-		java.lang.String username,
-		java.lang.String password,
-		java.util.Date registerTime,
-		java.lang.String registerIp,
-		java.lang.Integer loginCount) {
-
-		this.setId(id);
-		this.setUsername(username);
-		this.setPassword(password);
-		this.setRegisterTime(registerTime);
-		this.setRegisterIp(registerIp);
-		this.setLoginCount(loginCount);
-		initialize();
-	}
-
-	protected void initialize () {}
-
-
-
+	public static String PHONE_NUMBER = "phoneNum";
 	private int hashCode = Integer.MIN_VALUE;
-
 	// primary key
 	private java.lang.Integer id;
-
 	// fields
 	private java.lang.String username;
 	private java.lang.String email;
@@ -84,11 +44,39 @@ public abstract class BaseUnifiedUser  implements Serializable {
 	private java.util.Date errorTime;
 	private java.lang.Integer errorCount;
 	private java.lang.String errorIp;
-	
 	private java.lang.Boolean activation;
 	private java.lang.String activationCode;
+	private java.lang.String phoneNum;
 
+	// constructors
+	public BaseUnifiedUser() {
+		initialize();
+	}
 
+	/**
+	 * Constructor for primary key
+	 */
+	public BaseUnifiedUser(java.lang.Integer id) {
+		this.setId(id);
+		initialize();
+	}
+
+	/**
+	 * Constructor for required fields
+	 */
+	public BaseUnifiedUser(java.lang.Integer id, java.lang.String username, java.lang.String password, java.util.Date registerTime, java.lang.String registerIp, java.lang.Integer loginCount, java.lang.String phoneNum) {
+
+		this.setId(id);
+		this.setUsername(username);
+		this.setPassword(password);
+		this.setRegisterTime(registerTime);
+		this.setRegisterIp(registerIp);
+		this.setLoginCount(loginCount);
+		this.setPhoneNum(phoneNum);
+		initialize();
+	}
+
+	protected void initialize () {}
 
 	/**
 	 * Return the unique identifier of this class
@@ -311,6 +299,7 @@ public abstract class BaseUnifiedUser  implements Serializable {
 		this.activationCode = activationCode;
 	}
 
+
 	public boolean equals (Object obj) {
 		if (null == obj) return false;
 		if (!(obj instanceof com.jeecms.core.entity.UnifiedUser)) return false;
@@ -338,4 +327,11 @@ public abstract class BaseUnifiedUser  implements Serializable {
 	}
 
 
+	public String getPhoneNum() {
+		return phoneNum;
+	}
+
+	public void setPhoneNum(String phoneNum) {
+		this.phoneNum = phoneNum;
+	}
 }

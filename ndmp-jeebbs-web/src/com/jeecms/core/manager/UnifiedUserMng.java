@@ -1,16 +1,15 @@
 package com.jeecms.core.manager;
 
-import java.io.UnsupportedEncodingException;
-import java.util.List;
-
-import javax.mail.MessagingException;
-
 import com.jeecms.common.email.EmailSender;
 import com.jeecms.common.email.MessageTemplate;
 import com.jeecms.common.page.Pagination;
 import com.jeecms.common.security.BadCredentialsException;
 import com.jeecms.common.security.UsernameNotFoundException;
 import com.jeecms.core.entity.UnifiedUser;
+
+import javax.mail.MessagingException;
+import java.io.UnsupportedEncodingException;
+import java.util.List;
 
 public interface UnifiedUserMng {
 	/**
@@ -48,9 +47,13 @@ public interface UnifiedUserMng {
 
 	public boolean usernameExist(String username);
 
+	public boolean phoneNumExist(String phoneNum);
+
 	public boolean emailExist(String email);
 
 	public UnifiedUser getByUsername(String username);
+
+	public UnifiedUser getByPhoneNum(String phoneNum);
 
 	public List<UnifiedUser> getByEmail(String email);
 
@@ -60,10 +63,11 @@ public interface UnifiedUserMng {
 
 	public UnifiedUser save(String username, String email, String password,
 			String ip) throws UnsupportedEncodingException, MessagingException;
-	
-	public UnifiedUser save(String username, String email, String password,
-			String ip, Boolean activation, String uuid);
-	
+	public UnifiedUser save(String username, String email, String password, String ip, String phonenum) throws UnsupportedEncodingException, MessagingException;
+
+	public UnifiedUser save(String username, String email, String password, String ip, Boolean activation, String uuid);
+
+	public UnifiedUser save(String username, String email, String password, String ip, Boolean activation, String uuid, String phoneNum);
 	public String sendEmail(String username, String email,
 			Boolean activation, EmailSender sender,
 			MessageTemplate msgTpl) throws UnsupportedEncodingException, MessagingException;

@@ -1,17 +1,16 @@
 package com.jeecms.bbs.manager;
 
-import java.io.UnsupportedEncodingException;
-import java.util.Date;
-import java.util.List;
-import java.util.Map;
-
-import javax.mail.MessagingException;
-
 import com.jeecms.bbs.entity.BbsUser;
 import com.jeecms.bbs.entity.BbsUserExt;
 import com.jeecms.common.email.EmailSender;
 import com.jeecms.common.email.MessageTemplate;
 import com.jeecms.common.page.Pagination;
+
+import javax.mail.MessagingException;
+import java.io.UnsupportedEncodingException;
+import java.util.Date;
+import java.util.List;
+import java.util.Map;
 
 public interface BbsUserMng {
 	
@@ -42,9 +41,13 @@ public interface BbsUserMng {
 	
 	public BbsUser registerMember(String username, String email,Boolean official,
 			String password, String ip, Integer groupId, BbsUserExt userExt,Map<String,String>attr) throws UnsupportedEncodingException, MessagingException;
-	
+
+	public BbsUser registerMember(String username, String email, Boolean official, String password, String ip, String phonenum, Integer groupId, BbsUserExt userExt, Map<String, String> attr) throws UnsupportedEncodingException, MessagingException;
+
 	public BbsUser registerMember(String username, String email,
 			String password, String ip, Integer groupId, BbsUserExt userExt,Map<String,String>attr, Boolean activation , EmailSender sender, MessageTemplate msgTpl) throws UnsupportedEncodingException, MessagingException ;
+
+	public BbsUser registerMember(String username, String email, String password, String ip, String phonenum, Integer groupId, BbsUserExt userExt, Map<String, String> attr, Boolean activation, EmailSender sender, MessageTemplate msgTpl) throws UnsupportedEncodingException, MessagingException;
 
 	public void updateLoginInfo(Integer userId, String ip,Date loginTime,String sessionId);
 

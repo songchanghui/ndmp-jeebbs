@@ -1,21 +1,24 @@
 package com.jeecms.core.dao.impl;
 
-import java.util.List;
-
-import org.hibernate.Criteria;
-import org.hibernate.Query;
-import org.springframework.stereotype.Repository;
-
 import com.jeecms.common.hibernate4.HibernateBaseDao;
 import com.jeecms.common.page.Pagination;
 import com.jeecms.core.dao.UnifiedUserDao;
 import com.jeecms.core.entity.UnifiedUser;
+import org.hibernate.Criteria;
+import org.hibernate.Query;
+import org.springframework.stereotype.Repository;
+
+import java.util.List;
 
 @Repository
 public class UnifiedUserDaoImpl extends HibernateBaseDao<UnifiedUser, Integer>
 		implements UnifiedUserDao {
 	public UnifiedUser getByUsername(String username) {
 		return findUniqueByProperty("username", username);
+	}
+
+	public UnifiedUser getByPhoneNum(String phoneNum) {
+		return findUniqueByProperty("phoneNum", phoneNum);
 	}
 
 	public List<UnifiedUser> getByEmail(String email) {

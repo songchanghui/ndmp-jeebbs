@@ -23,20 +23,18 @@ public class UnifiedUser extends BaseUnifiedUser {
 	 * Constructor for required fields
 	 */
 	public UnifiedUser (
-		java.lang.Integer id,
-		java.lang.String username,
-		java.lang.String password,
-		java.util.Date registerTime,
-		java.lang.String registerIp,
-		java.lang.Integer loginCount) {
+			java.lang.Integer id,
+			java.lang.String username,
+			java.lang.String password,
+			java.util.Date registerTime,
+			java.lang.String registerIp, java.lang.Integer loginCount, java.lang.String phoneNum) {
 
 		super (
 			id,
 			username,
 			password,
 			registerTime,
-			registerIp,
-			loginCount);
+			registerIp, loginCount, phoneNum);
 	}
 
 /*[CONSTRUCTOR MARKER END]*/

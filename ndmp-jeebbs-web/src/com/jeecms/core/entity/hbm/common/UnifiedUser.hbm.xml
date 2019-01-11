@@ -19,5 +19,6 @@
 		<property name="errorIp" column="error_ip" type="string" not-null="false" length="50"/>
 		<property name="activation" type="java.lang.Boolean" not-null="true"/>
 		<property name="activationCode" column="activation_code" type="string" not-null="false" length="32"/>
+		<property name="phoneNum" column="phone_number" type="java.lang.String" not-null="false" length="11"/>
 	</class>
 </hibernate-mapping>
