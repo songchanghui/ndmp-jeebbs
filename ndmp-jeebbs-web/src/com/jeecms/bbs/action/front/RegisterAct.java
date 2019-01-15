@@ -100,6 +100,7 @@ public class RegisterAct {
 			HttpServletResponse response, ModelMap model) {
 		CmsSite site = CmsUtils.getSite(request);
 		BbsConfig config = bbsConfigMng.findById(site.getId());
+
 		// 没有开启会员注册
 		if (config.getRegisterStatus().equals(REGISTER_CLOSE)) {
 			return FrontUtils.showMessage(request, model,"member.registerClose");
@@ -121,12 +122,16 @@ public class RegisterAct {
 		WebErrors errors = validateSubmit(username, email, password, captcha,
 				site, request, response);
 		boolean flag = true;
-		if (!code.equals(phoneCodeCache.get(phoneNum))) {
+		if (phoneNum == null || phoneNum.equals("") || code == null || phoneCodeCache.get(phoneNum) == null || (!code.equals(phoneCodeCache.get(phoneNum).getObjectValue()))) {
 			flag = false;
 		}
-		if (errors.hasErrors() && flag) {
+		if (!flag) {
+			return FrontUtils.showMessage(request, model, "error.exceptionPhoneCaptcha");
+		}
+		if (errors.hasErrors()) {
 			return FrontUtils.showError(request, response, model, errors);
 		}
+
 		// 没有开启会员注册
 		if (config.getRegisterStatus().equals(REGISTER_CLOSE)) {
 			return FrontUtils.showMessage(request, model,"member.registerClose");
@@ -179,8 +184,7 @@ public class RegisterAct {
 			}
 		} else {
 			try {
-				user = bbsUserMng.registerMember(username, email, false,password,
-						  ip, groupId, userExt,attrs);
+				user = bbsUserMng.registerMember(username, email, false,password, ip, phoneNum, groupId, userExt, attrs);
 				callWebService(username, password, email, userExt);
 			} catch (Exception e) {
 				model.addAttribute("status", 200);
@@ -203,7 +207,22 @@ public class RegisterAct {
 	 * @param model
 	 */
 	@RequestMapping(value = "/getCode.jspx", method = RequestMethod.POST)
-	public void getCode(String phoneNum, HttpServletRequest request, HttpServletResponse response, ModelMap model) {
+	public String getCode(String phoneNum, HttpServletRequest request, HttpServletResponse response, ModelMap model) {
+		// 手机号为空，返回false。
+		if (StringUtils.isBlank(phoneNum)) {
+			ResponseUtils.renderJson(response, "false");
+			WebErrors errors = WebErrors.create(request);
+			errors.addErrorCode("error.exceptionPhone");
+			return FrontUtils.showError(request, response, model, errors);
+		}
+		// 手机号存在，返回false。
+		if (unifiedUserMng.phoneNumExist(phoneNum)) {
+			ResponseUtils.renderJson(response, "false");
+			WebErrors errors = WebErrors.create(request);
+			errors.addErrorCode("error.exceptionPhone");
+			return FrontUtils.showError(request, response, model, errors);
+		}
+
 		String code = smsCode();
 		MessageSend messageSend = new MessageSend(messageConfig);
 		messageSend.addTo(phoneNum);
@@ -216,9 +235,12 @@ public class RegisterAct {
 			if (json.get("status").equals("success")) {
 				Element element = new Element(phoneNum, code);
 				phoneCodeCache.put(element);
+			} else {
+				return FrontUtils.showMessage(request, model, "error.exceptionPhone");
 			}
 			System.out.println(">>手机号:" + phoneNum + ",发送手机验证码:" + code + ",返回结果:");
 		}
+		return code;
 	}
 
 	//创建验证码
