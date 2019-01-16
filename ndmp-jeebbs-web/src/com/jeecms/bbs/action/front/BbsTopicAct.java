@@ -1,20 +1,18 @@
 package com.jeecms.bbs.action.front;
 
-import static com.jeecms.bbs.Constants.TPLDIR_FORUM;
-import static com.jeecms.bbs.Constants.TPLDIR_TOPIC;
-import static com.jeecms.bbs.entity.BbsTopic.TOPIC_NORMAL;
-import static com.jeecms.bbs.entity.BbsTopic.TOPIC_VOTE;
-
-import java.text.SimpleDateFormat;
-import java.util.ArrayList;
-import java.util.Date;
-import java.util.List;
-import java.util.Locale;
-import java.util.Set;
-
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
-
+import com.jeecms.bbs.cache.TopicCountEhCache;
+import com.jeecms.bbs.entity.*;
+import com.jeecms.bbs.manager.*;
+import com.jeecms.bbs.web.CmsUtils;
+import com.jeecms.bbs.web.FrontUtils;
+import com.jeecms.bbs.web.StrUtils;
+import com.jeecms.bbs.web.WebErrors;
+import com.jeecms.common.util.CheckMobile;
+import com.jeecms.common.web.RequestUtils;
+import com.jeecms.common.web.ResponseUtils;
+import com.jeecms.common.web.springmvc.MessageResolver;
+import com.jeecms.core.entity.CmsSite;
+import com.jeecms.core.manager.CmsConfigMng;
 import org.apache.commons.io.FilenameUtils;
 import org.apache.commons.lang.StringUtils;
 import org.json.JSONArray;
@@ -33,46 +31,22 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.multipart.MultipartHttpServletRequest;
 
-import com.jeecms.bbs.api.Constants;
-import com.jeecms.bbs.cache.TopicCountEhCache;
-import com.jeecms.bbs.entity.BbsCategory;
-import com.jeecms.bbs.entity.BbsForum;
-import com.jeecms.bbs.entity.BbsPostType;
-import com.jeecms.bbs.entity.BbsTopic;
-import com.jeecms.bbs.entity.BbsTopicType;
-import com.jeecms.bbs.entity.BbsUser;
-import com.jeecms.bbs.entity.BbsUserGroup;
-import com.jeecms.bbs.entity.BbsVoteItem;
-import com.jeecms.bbs.entity.BbsVoteTopic;
-import com.jeecms.bbs.manager.BbsCategoryMng;
-import com.jeecms.bbs.manager.BbsConfigChargeMng;
-import com.jeecms.bbs.manager.BbsConfigMng;
-import com.jeecms.bbs.manager.BbsForumMng;
-import com.jeecms.bbs.manager.BbsLimitMng;
-import com.jeecms.bbs.manager.BbsPostTypeMng;
-import com.jeecms.bbs.manager.BbsTopicMng;
-import com.jeecms.bbs.manager.BbsTopicTypeMng;
-import com.jeecms.bbs.manager.BbsUserGroupMng;
-import com.jeecms.bbs.manager.BbsVoteItemMng;
-import com.jeecms.bbs.manager.BbsVoteRecordMng;
-import com.jeecms.bbs.manager.CmsSensitivityMng;
-import com.jeecms.bbs.web.CmsUtils;
-import com.jeecms.bbs.web.FrontUtils;
-import com.jeecms.bbs.web.StrUtils;
-import com.jeecms.bbs.web.WebErrors;
-import com.jeecms.common.util.CheckMobile;
-import com.jeecms.common.web.RequestUtils;
-import com.jeecms.common.web.ResponseUtils;
-import com.jeecms.common.web.springmvc.MessageResolver;
-import com.jeecms.core.entity.CmsSite;
-import com.jeecms.core.manager.CmsConfigMng;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.List;
+import java.util.Locale;
+
+import static com.jeecms.bbs.Constants.TPLDIR_FORUM;
+import static com.jeecms.bbs.Constants.TPLDIR_TOPIC;
+import static com.jeecms.bbs.entity.BbsTopic.TOPIC_NORMAL;
+import static com.jeecms.bbs.entity.BbsTopic.TOPIC_VOTE;
 
 @Controller
 public class BbsTopicAct {
-	private static final Logger log = LoggerFactory
-			.getLogger(BbsTopicAct.class);
 	public static final String CATEGORY_VOTE = "vote";
-
 	public static final String TPL_TOPICADD = "tpl.topicadd";
 	public static final String TPL_TOPICEDIT = "tpl.topicedit";
 	public static final String TPL_NO_LOGIN = "tpl.nologin";
@@ -88,6 +62,56 @@ public class BbsTopicAct {
 	public static final String TPL_DAY_TOPIC = "tpl.daytopic";
 	public static final String TPL_NO_VIEW = "tpl.noview";
 	public static final String TPL_NO_POSTTYPE = "tpl.noposttype";
+	private static final Logger log = LoggerFactory.getLogger(BbsTopicAct.class);
+	private final static Whitelist user_content_filter = Whitelist.relaxed();
+
+	static {
+		user_content_filter.addTags("embed", "object", "param", "span", "div");
+		user_content_filter.addAttributes(":all", "style", "class", "id", "name");
+		user_content_filter.addAttributes("object", "width", "height", "classid", "codebase");
+		user_content_filter.addAttributes("param", "name", "value");
+		user_content_filter.addAttributes("embed", "src", "quality", "width", "height", "allowFullScreen", "allowScriptAccess", "flashvars", "name", "type", "pluginspage");
+	}
+
+	@Autowired
+	private BbsTopicMng manager;
+	@Autowired
+	private BbsForumMng bbsForumMng;
+	@Autowired
+	private BbsCategoryMng bbsCategoryMng;
+	@Autowired
+	private BbsConfigMng bbsConfigMng;
+	@Autowired
+	private TopicCountEhCache topicCountEhCache;
+	@Autowired
+	private BbsUserGroupMng bbsUserGroupMng;
+	@Autowired
+	private BbsVoteItemMng bbsVoteItemMng;
+	@Autowired
+	private BbsVoteRecordMng bbsVoteRecordMng;
+	@Autowired
+	private BbsPostTypeMng postTypeMng;
+	@Autowired
+	private BbsLimitMng bbsLimitMng;
+	@Autowired
+	private BbsTopicTypeMng bbsTopicTypeMng;
+	@Autowired
+	private BbsConfigChargeMng configChargeMng;
+	@Autowired
+	private CmsConfigMng cmsConfigMng;
+	@Autowired
+	private CmsSensitivityMng sensitivityMng;
+
+	/**
+	 * 对用户输入内容进行过滤
+	 *
+	 * @param html
+	 * @return
+	 */
+	public static String filterUserInputContent(String html) {
+		if (StringUtils.isBlank(html)) return "";
+		return Jsoup.clean(html, user_content_filter);
+	}
 
 	@RequestMapping("/topic/v_add{forumId}.jspx")
 	public String add(@PathVariable Integer forumId, String category,
@@ -120,7 +144,7 @@ public class BbsTopicAct {
 		return FrontUtils.getTplPath(request, site,
 				TPLDIR_TOPIC, TPL_TOPICADD);
 	}
-	
+
 	@RequestMapping("/topic/o_generateTags.jspx")
 	public void generateTags(String title,HttpServletResponse response) throws JSONException {
 		JSONObject json = new JSONObject();
@@ -138,7 +162,6 @@ public class BbsTopicAct {
 		ResponseUtils.renderJson(response, json.toString());
 	}
 	
-
 	@RequestMapping("/topic/o_save.jspx")
 	public String save(Integer forumId,  String title,
 			String content, Integer category, Integer categoryType,
@@ -224,7 +247,7 @@ public class BbsTopicAct {
 			return "redirect:" + bean.getRedirectUrl();
 		}
 	}
-	
+
 	@RequestMapping("/topic/o_saveAjax.jspx")
 	public void saveAjax(Integer forumId,  String title,
 			String content, Integer category, Integer categoryType,
@@ -294,7 +317,7 @@ public class BbsTopicAct {
 		}
 		ResponseUtils.renderJson(response, json.toString());
 	}
-	
+
 	@RequestMapping("/topic/v_moveInput.jspx")
 	public String moveInput(String ids ,
 			HttpServletRequest request, ModelMap model) {
@@ -322,7 +345,7 @@ public class BbsTopicAct {
 		return FrontUtils.getTplPath(request, site,
 				TPLDIR_TOPIC, TPL_TOPIC_MOVE);
 	}
-
+	
 	@RequestMapping("/topic/o_moveSubmit.jspx")
 	public String moveSubmit(String ids, Integer moveTo,
 			String url , String reason, HttpServletRequest request,
@@ -344,7 +367,7 @@ public class BbsTopicAct {
 		manager.move(idArray, moveTo, reason, user);
 		return "redirect:" + url;
 	}
-
+	
 	@RequestMapping("/topic/v_shieldInput.jspx")
 	public String shieldInput(String ids ,
 			HttpServletRequest request, ModelMap model) {
@@ -370,7 +393,7 @@ public class BbsTopicAct {
 		return FrontUtils.getTplPath(request, site,
 				TPLDIR_TOPIC, TPL_TOPIC_SHIELD);
 	}
-
+	
 	@RequestMapping("/topic/o_shieldSubmit.jspx")
 	public String shieldSubmit(String ids , String url,
 			boolean shield, String reason, HttpServletRequest request,
@@ -419,7 +442,7 @@ public class BbsTopicAct {
 		return FrontUtils.getTplPath(request, site,
 				TPLDIR_TOPIC, TPL_TOPIC_LOCK);
 	}
-
+	
 	@RequestMapping("/topic/o_lockSumbit.jspx")
 	public String lockSubmit(String ids, String url , boolean lock,
 			String reason, HttpServletRequest request, ModelMap model) {
@@ -586,7 +609,7 @@ public class BbsTopicAct {
 		manager.upTop(idArray, topLevel, reason, user);
 		return "redirect:" +url;
 	}
-	
+
 	@RequestMapping("/topic/o_upTopAjax.jspx")
 	public void upTopAjax(Integer topicId, Integer forumId,
 			 HttpServletRequest request,
@@ -673,7 +696,7 @@ public class BbsTopicAct {
 	 * @param status 推荐状态 0取消推荐 1版主推荐
 	 * @param request
 	 * @param model
-	 * @throws JSONException 
+	 * @throws JSONException
 	 */
 	@RequestMapping("/topic/o_recommend.jspx")
 	public void recommend(String ids,Short status ,HttpServletRequest request,HttpServletResponse response) throws JSONException{
@@ -690,117 +713,104 @@ public class BbsTopicAct {
 	}
 
 	@RequestMapping("/topic/searchDayTopic*.jspx")
-	public String searchByDay(Integer forumId, Integer day,
-			HttpServletRequest request,HttpServletResponse response,
-			ModelMap model) {
+	public String searchByDay(Integer forumId, Integer day, HttpServletRequest request, HttpServletResponse response, ModelMap model) {
 		CmsSite site = CmsUtils.getSite(request);
 		BbsUser user = CmsUtils.getUser(request);
 		FrontUtils.frontData(request, model, site);
-		if(day==null){
-			day=1;
+		if (day==null) {
+			day = 1;
 		}
-		BbsForum forum = null ;
-		if(forumId!=null){
-			forum	= bbsForumMng.findById(forumId);
+		BbsForum forum = null;
+		if (forumId != null) {
+			forum = bbsForumMng.findById(forumId);
 		}
-		if(forum==null){
+		if (forum == null) {
 			return FrontUtils.pageNotFound(request, response, model);
 		}
 		boolean check = checkView(forum, user, site);
 		if (!check) {
-			model.put("msg",MessageResolver.getMessage(request, "member.hasnopermission"));
-			return FrontUtils.getTplPath(request, site,
-					TPLDIR_FORUM, TPL_NO_VIEW);
+			model.put("msg", MessageResolver.getMessage(request, "member.hasnopermission"));
+			return FrontUtils.getTplPath(request, site, TPLDIR_FORUM, TPL_NO_VIEW);
 		}
-		model.put("manager", checkManager(request,forum, user, site) == null ? true
-				: false);
+		model.put("manager", checkManager(request, forum, user, site) == null ? true : false);
 		model.put("uptop", checkUpTop(forum, user, site));
-		model.put("sheild", checkShield(request,forum, user, site) == null ? true
-				: false);
+		model.put("sheild", checkShield(request, forum, user, site) == null ? true : false);
 		model.put("moderators", checkModerators(forum, user, site));
 		model.put("forum", forum);
 		model.put("day", day);
 		model.put("forumId", forumId);
 		FrontUtils.frontPageData(request, model);
-		return FrontUtils.getTplPath(request, site,
-				TPLDIR_TOPIC, TPL_DAY_TOPIC);
+		return FrontUtils.getTplPath(request, site, TPLDIR_TOPIC, TPL_DAY_TOPIC);
 	}
 
 	@RequestMapping("/topic/o_delete.jspx")
-	public String delete(Integer[] topicIds, Integer pageNo,
-			HttpServletRequest request, ModelMap model) {
-		if(topicIds!=null){
+	public String delete(Integer[] topicIds, Integer pageNo, HttpServletRequest request, ModelMap model) {
+		if (topicIds != null) {
 			BbsTopic[] beans = manager.deleteByIds(topicIds);
 			BbsForum forum = beans[0].getForum();
 			for (BbsTopic bean : beans) {
 				log.info("delete BbsTopic id={}", bean.getId());
 			}
 			return "redirect:" + forum.getRedirectUrl();
-		}else{
+		} else {
 			return "redirect:/index.jhtml";
 		}
 	}
-	
+
 	@RequestMapping("/topic/delete_ajax.jspx")
-	public void deleteAjax(String topicIds,String url,
-			HttpServletRequest request,HttpServletResponse response) throws JSONException{
+	public void deleteAjax(String topicIds, String url, HttpServletRequest request, HttpServletResponse response) throws JSONException {
 		Integer status = -1;
 		JSONObject json = new JSONObject();
-		if (topicIds!=null&&topicIds.length()>0) {
+		if (topicIds != null && topicIds.length() > 0) {
 			Integer[] idArray = StrUtils.getInts(topicIds);
 			BbsTopic[] beans = manager.deleteByIds(idArray);
 			for (BbsTopic bean : beans) {
 				log.info("delete BbsTopic id={}", bean.getId());
 			}
-			status = 0 ;
+			status = 0;
 		}
 		json.put("status", status);
 		ResponseUtils.renderJson(response, json.toString());
 	}
-	
+
 	@RequestMapping("/topic/delete.jspx")
-	public String delete(Integer topicId, Integer pageNo,
-			HttpServletRequest request, ModelMap model) {
-		if(topicId!=null){
+	public String delete(Integer topicId, Integer pageNo, HttpServletRequest request, ModelMap model) {
+		if (topicId != null) {
 			BbsTopic[] beans = manager.deleteByIds(new Integer[]{topicId});
 			BbsForum forum = beans[0].getForum();
 			for (BbsTopic bean : beans) {
 				log.info("delete BbsTopic id={}", bean.getId());
 			}
 			return "redirect:" + forum.getRedirectUrl();
-		}else{
+		} else {
 			return "redirect:/index.jhtml";
 		}
 	}
-	
+
 	@RequestMapping("/topic/vote_result.jspx")
-	public String result(Integer tid, HttpServletRequest request,
-			HttpServletResponse response, ModelMap model) {
+	public String result(Integer tid, HttpServletRequest request, HttpServletResponse response, ModelMap model) {
 		CmsSite site = CmsUtils.getSite(request);
 		BbsUser user = CmsUtils.getUser(request);
 		BbsTopic topic = null;
-		if(tid!=null){
+		if (tid != null) {
 			topic = manager.findById(tid);
 		}
 		FrontUtils.frontData(request, model, site);
-		if(topic!=null){
+		if (topic != null) {
 			if (bbsVoteRecordMng.findRecord(user == null ? null : user.getId(), tid) != null) {
 				model.addAttribute("voted", true);
 			}
 			List<BbsVoteItem> list = bbsVoteItemMng.findByTopic(tid);
 			model.addAttribute("voteItems", list);
 			model.addAttribute("topic", topic);
-			return FrontUtils.getTplPath(request, site,
-					TPLDIR_TOPIC, TPL_TOPIC_VOTERESULT);
-		}else{
+			return FrontUtils.getTplPath(request, site, TPLDIR_TOPIC, TPL_TOPIC_VOTERESULT);
+		} else {
 			return FrontUtils.pageNotFound(request, response, model);
 		}
 	}
 
 	@RequestMapping("/topic/vote.jspx")
-	public void vote(Integer tid, Integer[] itemIds,
-			HttpServletRequest request, HttpServletResponse response,
-			ModelMap model) throws JSONException {
+	public void vote(Integer tid, Integer[] itemIds, HttpServletRequest request, HttpServletResponse response, ModelMap model) throws JSONException {
 		BbsUser user = CmsUtils.getUser(request);
 		BbsVoteTopic topic = (BbsVoteTopic) manager.findById(tid);
 		JSONObject json = new JSONObject();
@@ -814,79 +824,75 @@ public class BbsTopicAct {
 		}
 		ResponseUtils.renderJson(response, json.toString());
 	}
-	
+
 	@RequestMapping("/topic/v_list_json.jspx")
-	public void getJsonList(Short topLevel,Integer forumId,String keywords,
-			Boolean mytopic,Boolean myreply,
-			Integer first, Integer count,
-			HttpServletRequest request,HttpServletResponse  response) {
-		if(count==null){
-			count=5;
+	public void getJsonList(Short topLevel, Integer forumId, String keywords, Boolean mytopic, Boolean myreply, Integer first, Integer count, HttpServletRequest request, HttpServletResponse response) {
+		if (count == null) {
+			count = 5;
 		}
-		if(first==null){
-			first=0;
+		if (first == null) {
+			first = 0;
 		}
-		if(topLevel==null){
-			topLevel=0;
+		if (topLevel == null) {
+			topLevel = 0;
 		}
-		JSONArray array=new JSONArray();
-		List<BbsTopic>list=null;
-		if(forumId!=null){
+		JSONArray array = new JSONArray();
+		List<BbsTopic> list = null;
+		if (forumId != null) {
 			//板块下的主题列表
-			list=manager.getList(forumId, null,null,topLevel,first, count);
-		}else if(StringUtils.isNotBlank(keywords)){
+			list = manager.getList(forumId, null, null, topLevel, first, count);
+		} else if (StringUtils.isNotBlank(keywords)) {
 			//搜索帖子
-			list=manager.getList(null, keywords, null,topLevel, first, count);
-		}else if(mytopic!=null&&mytopic){
+			list = manager.getList(null, keywords, null, topLevel, first, count);
+		} else if (mytopic != null && mytopic) {
 			//我的主题
-			BbsUser user=CmsUtils.getUser(request);
-			if(user!=null){
-				list=manager.getList(null, null, user.getId(),topLevel,first, count);
+			BbsUser user = CmsUtils.getUser(request);
+			if (user != null) {
+				list = manager.getList(null, null, user.getId(), topLevel, first, count);
 			}
-		}else if(myreply!=null&&myreply){
+		} else if (myreply != null && myreply) {
 			//我的回复
-			BbsUser user=CmsUtils.getUser(request);
-			if(user!=null){
-				list=manager.getMemberReply(CmsUtils.getSiteId(request), user.getId(), first, count);
+			BbsUser user = CmsUtils.getUser(request);
+			if (user != null) {
+				list = manager.getMemberReply(CmsUtils.getSiteId(request), user.getId(), first, count);
 			}
-		}else{
+		} else {
 			//整个论坛下的主题列表
-			list=manager.getNewList(topLevel,first,count, 1);
+			list = manager.getNewList(topLevel, first, count, 1);
 		}
-		if(list!=null&&list.size()>0){
-			SimpleDateFormat format =new SimpleDateFormat("yy-MM-dd HH:mm");
+		if (list != null && list.size() > 0) {
+			SimpleDateFormat format = new SimpleDateFormat("yy-MM-dd HH:mm");
 			try {
-				for(int i=0;i<list.size();i++){
-					BbsTopic topic=list.get(i);
+				for (int i = 0; i < list.size(); i++) {
+					BbsTopic topic = list.get(i);
 					JSONObject object = new JSONObject();
-					object.put("ups",topic.getUps());
-					object.put("replyCount",topic.getReplyCount());
-					object.put("viewCount",topic.getViewCount());
-					object.put("postSource",topic.getFirstPost().getPostSource());
-					object.put("lastReplyUsername",topic.getLastReply().getUsername());
-					object.put("lastReplyUsername",topic.getLastReply().getUsername());
+					object.put("ups", topic.getUps());
+					object.put("replyCount", topic.getReplyCount());
+					object.put("viewCount", topic.getViewCount());
+					object.put("postSource", topic.getFirstPost().getPostSource());
+					object.put("lastReplyUsername", topic.getLastReply().getUsername());
+					object.put("lastReplyUsername", topic.getLastReply().getUsername());
 					object.put("username", topic.getCreater().getUsername());
-					object.put("createTime",format.format(topic.getCreateTime()));
-					object.put("lastReplyCreateTimeHtml",topic.getLastReplyTimeHtml());
+					object.put("createTime", format.format(topic.getCreateTime()));
+					object.put("lastReplyCreateTimeHtml", topic.getLastReplyTimeHtml());
 					object.put("title", topic.getTitle());
 					object.put("content", topic.getTitle());
 					object.put("url", topic.getUrl());
 					object.put("topLevel", topic.getTopLevel());
 					object.put("affix", topic.getAffix());
 					object.put("id", topic.getId());
+					object.put("topicZ", topic);
 					array.put(object);
 				}
-			}
-			catch (JSONException e) {
+			} catch (JSONException e) {
 				// TODO Auto-generated catch block
-			//	e.printStackTrace();
+				//	e.printStackTrace();
 			}
 		}
 		ResponseUtils.renderJson(response, array.toString());
 	}
 
-	private WebErrors checkVote(HttpServletRequest request, BbsUser user,
-			BbsTopic topic, Integer[] itemIds) {
+	private WebErrors checkVote(HttpServletRequest request, BbsUser user, BbsTopic topic, Integer[] itemIds) {
 		WebErrors errors = WebErrors.create(request);
 		if (user == null) {
 			errors.addErrorCode("vote.noLogin");
@@ -911,52 +917,52 @@ public class BbsTopicAct {
 		return errors;
 	}
 
-	private String checkTopic(HttpServletRequest request,BbsForum forum, BbsUser user, CmsSite site) {
-		String msg="";
+	private String checkTopic(HttpServletRequest request, BbsForum forum, BbsUser user, CmsSite site) {
+		String msg = "";
 		if (forum.getGroupTopics() == null) {
-			msg=MessageResolver.getMessage(request, "member.hasnopermission");
+			msg = MessageResolver.getMessage(request, "member.hasnopermission");
 			return msg;
 		} else {
 			BbsUserGroup group = user.getGroup();
 			if (user.getProhibit()) {
-				msg=MessageResolver.getMessage(request, "member.gag");
+				msg = MessageResolver.getMessage(request, "member.gag");
 				return msg;
 			}
 			if (group == null) {
-				msg=MessageResolver.getMessage(request, "member.hasnopermission");
+				msg = MessageResolver.getMessage(request, "member.hasnopermission");
 				return msg;
 			}
 			if (!group.allowTopic()) {
-				msg=MessageResolver.getMessage(request, "member.hasnopermission");
+				msg = MessageResolver.getMessage(request, "member.hasnopermission");
 				return msg;
 			}
 			if (forum.getGroupTopics().indexOf("," + group.getId() + ",") == -1) {
-				msg=MessageResolver.getMessage(request, "member.hasnopermission");
+				msg = MessageResolver.getMessage(request, "member.hasnopermission");
 				return msg;
 			}
 			if (!group.checkPostToday(user.getPostToday())) {
-				msg=MessageResolver.getMessage(request, "member.posttomany");
+				msg = MessageResolver.getMessage(request, "member.posttomany");
 				return msg;
 			}
 		}
-		String ip=RequestUtils.getIpAddr(request);
-		boolean ipLimit=bbsLimitMng.ipIsLimit(ip);
-		boolean userLimit=bbsLimitMng.userIsLimit(user.getId());
-		if(ipLimit){
-			msg=MessageResolver.getMessage(request, "member.ipforbidden");
+		String ip = RequestUtils.getIpAddr(request);
+		boolean ipLimit = bbsLimitMng.ipIsLimit(ip);
+		boolean userLimit = bbsLimitMng.userIsLimit(user.getId());
+		if (ipLimit) {
+			msg = MessageResolver.getMessage(request, "member.ipforbidden");
 			return msg;
 		}
-		if(userLimit){
-			msg=MessageResolver.getMessage(request, "member.userforbidden");
+		if (userLimit) {
+			msg = MessageResolver.getMessage(request, "member.userforbidden");
 			return msg;
 		}
 		return null;
 	}
 
-	private String checkManager(HttpServletRequest request,BbsForum forum, BbsUser user, CmsSite site) {
+	private String checkManager(HttpServletRequest request, BbsForum forum, BbsUser user, CmsSite site) {
 		String msg;
 		if (forum.getGroupTopics() == null) {
-			msg=MessageResolver.getMessage(request, "member.hasnopermission");
+			msg = MessageResolver.getMessage(request, "member.hasnopermission");
 			return msg;
 		} else {
 			BbsUserGroup group = null;
@@ -966,34 +972,33 @@ public class BbsTopicAct {
 				group = user.getGroup();
 			}
 			if (group == null) {
-				msg=MessageResolver.getMessage(request, "member.hasnopermission");
+				msg = MessageResolver.getMessage(request, "member.hasnopermission");
 				return msg;
 			}
 			if (!group.allowTopic()) {
-				msg=MessageResolver.getMessage(request, "member.hasnopermission");
+				msg = MessageResolver.getMessage(request, "member.hasnopermission");
 				return msg;
 			}
 			if (forum.getGroupTopics().indexOf("," + group.getId() + ",") == -1) {
-				msg=MessageResolver.getMessage(request, "member.hasnopermission");
+				msg = MessageResolver.getMessage(request, "member.hasnopermission");
 				return msg;
 			}
 			if (!group.hasRight(forum, user)) {
-				msg=MessageResolver.getMessage(request, "member.hasnopermission");
+				msg = MessageResolver.getMessage(request, "member.hasnopermission");
 				return msg;
 			}
 			if (!group.topicManage()) {
-				msg=MessageResolver.getMessage(request, "member.hasnopermission");
+				msg = MessageResolver.getMessage(request, "member.hasnopermission");
 				return msg;
 			}
 		}
 		return null;
 	}
 
-	private String checkUpTop(HttpServletRequest request,BbsForum forum, BbsUser user, CmsSite site,
-			short topLevel) {
+	private String checkUpTop(HttpServletRequest request, BbsForum forum, BbsUser user, CmsSite site, short topLevel) {
 		String msg;
 		if (forum.getGroupTopics() == null) {
-			msg=MessageResolver.getMessage(request, "member.hasnopermission");
+			msg = MessageResolver.getMessage(request, "member.hasnopermission");
 			return msg;
 		} else {
 			BbsUserGroup group = null;
@@ -1003,28 +1008,28 @@ public class BbsTopicAct {
 				group = user.getGroup();
 			}
 			if (group == null) {
-				msg=MessageResolver.getMessage(request, "member.hasnopermission");
+				msg = MessageResolver.getMessage(request, "member.hasnopermission");
 				return msg;
 			}
 			if (!group.allowTopic()) {
-				msg=MessageResolver.getMessage(request, "member.hasnopermission");
+				msg = MessageResolver.getMessage(request, "member.hasnopermission");
 				return msg;
 			}
 			if (forum.getGroupTopics().indexOf("," + group.getId() + ",") == -1) {
-				msg=MessageResolver.getMessage(request, "member.hasnopermission");
+				msg = MessageResolver.getMessage(request, "member.hasnopermission");
 				return msg;
 			}
 			if (!group.hasRight(forum, user)) {
-				msg=MessageResolver.getMessage(request, "member.hasnopermission");
+				msg = MessageResolver.getMessage(request, "member.hasnopermission");
 				return msg;
 			}
 			if (group.topicTop() == 0) {
-				msg=MessageResolver.getMessage(request, "member.hasnopermission");
+				msg = MessageResolver.getMessage(request, "member.hasnopermission");
 				return msg;
 			}
 			if (topLevel > 0) {
 				if (group.topicTop() < topLevel) {
-					msg=MessageResolver.getMessage(request, "member.hasnopermission");
+					msg = MessageResolver.getMessage(request, "member.hasnopermission");
 					return msg;
 				}
 			}
@@ -1032,10 +1037,10 @@ public class BbsTopicAct {
 		return null;
 	}
 
-	private String checkShield(HttpServletRequest request,BbsForum forum, BbsUser user, CmsSite site) {
+	private String checkShield(HttpServletRequest request, BbsForum forum, BbsUser user, CmsSite site) {
 		String msg;
 		if (forum.getGroupTopics() == null) {
-			msg=MessageResolver.getMessage(request, "member.hasnopermission");
+			msg = MessageResolver.getMessage(request, "member.hasnopermission");
 			return msg;
 		} else {
 			BbsUserGroup group = null;
@@ -1045,23 +1050,23 @@ public class BbsTopicAct {
 				group = user.getGroup();
 			}
 			if (group == null) {
-				msg=MessageResolver.getMessage(request, "member.hasnopermission");
+				msg = MessageResolver.getMessage(request, "member.hasnopermission");
 				return msg;
 			}
 			if (!group.allowTopic()) {
-				msg=MessageResolver.getMessage(request, "member.hasnopermission");
+				msg = MessageResolver.getMessage(request, "member.hasnopermission");
 				return msg;
 			}
 			if (forum.getGroupTopics().indexOf("," + group.getId() + ",") == -1) {
-				msg=MessageResolver.getMessage(request, "member.hasnopermission");
+				msg = MessageResolver.getMessage(request, "member.hasnopermission");
 				return msg;
 			}
 			if (!group.hasRight(forum, user)) {
-				msg=MessageResolver.getMessage(request, "member.hasnopermission");
+				msg = MessageResolver.getMessage(request, "member.hasnopermission");
 				return msg;
 			}
 			if (!group.topicShield()) {
-				msg=MessageResolver.getMessage(request, "member.hasnopermission");
+				msg = MessageResolver.getMessage(request, "member.hasnopermission");
 				return msg;
 			}
 		}
@@ -1137,84 +1142,36 @@ public class BbsTopicAct {
 		}
 		return TOPIC_NORMAL;
 	}
-	
-	private boolean checkFiles(String allowSuffix,List<MultipartFile>files){
+
+	private boolean checkFiles(String allowSuffix, List<MultipartFile> files) {
 		//不为空设置检查
-		if(StringUtils.isNotBlank(allowSuffix)){
-			String[] exts=allowSuffix.split(",");
-			for(MultipartFile file:files){
+		if (StringUtils.isNotBlank(allowSuffix)) {
+			String[] exts = allowSuffix.split(",");
+			for (MultipartFile file : files) {
 				String origName = file.getOriginalFilename();
 				String ext = FilenameUtils.getExtension(origName).toLowerCase(Locale.ENGLISH);
 				//文件格式检查
-				if(isNotInArray(exts, ext)){
+				if (isNotInArray(exts, ext)) {
 					return true;
 				}
 			}
 			return false;
-		}else{
+		} else {
 			return false;
 		}
 	}
-	
-	private boolean isNotInArray(String[] exts,String ext){
-		if(exts!=null&&exts.length>0){
-			for(String e:exts){
-				if(e.equals(ext)){
+
+	private boolean isNotInArray(String[] exts, String ext) {
+		if (exts != null && exts.length > 0) {
+			for (String e : exts) {
+				if (e.equals(ext)) {
 					return false;
 				}
 			}
 			return true;
-		}else{
+		} else {
 			//exts为空
 			return true;
 		}
 	}
-
-	private final static Whitelist user_content_filter = Whitelist.relaxed();
-	static {
-		user_content_filter.addTags("embed","object","param","span","div");
-		user_content_filter.addAttributes(":all", "style", "class", "id", "name");
-		user_content_filter.addAttributes("object", "width", "height","classid","codebase");	
-		user_content_filter.addAttributes("param", "name", "value");
-		user_content_filter.addAttributes("embed", "src","quality","width","height","allowFullScreen","allowScriptAccess","flashvars","name","type","pluginspage");
-	}
-
-	/**
-	 * 对用户输入内容进行过滤
-	 * @param html
-	 * @return
-	 */
-	public static String filterUserInputContent(String html) {
-		if(StringUtils.isBlank(html)) return "";
-		return Jsoup.clean(html, user_content_filter);
-	}
-
-	@Autowired
-	private BbsTopicMng manager;
-	@Autowired
-	private BbsForumMng bbsForumMng;
-	@Autowired
-	private BbsCategoryMng bbsCategoryMng;
-	@Autowired
-	private BbsConfigMng bbsConfigMng;
-	@Autowired
-	private TopicCountEhCache topicCountEhCache;
-	@Autowired
-	private BbsUserGroupMng bbsUserGroupMng;
-	@Autowired
-	private BbsVoteItemMng bbsVoteItemMng;
-	@Autowired
-	private BbsVoteRecordMng bbsVoteRecordMng;
-	@Autowired
-	private BbsPostTypeMng postTypeMng;
-	@Autowired
-	private BbsLimitMng bbsLimitMng;
-	@Autowired
-	private BbsTopicTypeMng bbsTopicTypeMng;
-	@Autowired
-	private BbsConfigChargeMng configChargeMng;
-	@Autowired
-	private CmsConfigMng cmsConfigMng;
-	@Autowired
-	private CmsSensitivityMng sensitivityMng;
 }

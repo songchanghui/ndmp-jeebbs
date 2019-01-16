@@ -71,6 +71,8 @@
                 content = content + "<li><a href='" + data[i].url + "' data-ajax='false'>";
                 content = content + "<p>" + data[i].title + "</p>";
                 content = content + "<img src='/${res}/bbs_forum/img/pl_pic03.png'><span>" + data[i].replyCount + "</span></a></li>";
+                console.log(data.firstPost);
+
             }
             first = first + count;
             setTimeout(function () {

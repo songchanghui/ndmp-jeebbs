@@ -29,10 +29,15 @@
 [#list list as friend]
 <li class="clearfix">
 	<div class="imgbox">
+		[#if friend.avatar ??]
 		<img src="${base!}${friend.avatar!}"/>
+		[#else]
+		<img src="/images/touxiang.png"/>
+		[/#if]
+
 	</div>
 	<div class="namebox">
-		<p><img src="images/level.png"/></p>
+		<p><img src="/images/level.png"/></p>
 		<p class="name">${friend.username!}</p>
 	</div>
 	<div class="control">
@@ -65,13 +70,13 @@
 			[/#if]
 		[#else]
 		<div class="shenqing" style="">
-			<img src="images/shenqing.png"/>
+			<img src="/images/shenqing.png"/>
 			<span><a href="" onclick="applyFriend('${tag_bean.user.username!}')">申请好友</a></span>
 		</div>
 		[/#if]
 	[#else]
 		<div class="shenqing" style="">
-			<img src="images/shenqing.png"/>
+			<img src="/images/shenqing.png"/>
 			<span><a href="" onclick="applyFriend('${friend.username!}')">申请好友</a></span>
 		</div>
     	[/#if]
