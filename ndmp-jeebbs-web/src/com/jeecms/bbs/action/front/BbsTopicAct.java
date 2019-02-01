@@ -695,7 +695,6 @@ public class BbsTopicAct {
 	 * @param ids 主题编号
 	 * @param status 推荐状态 0取消推荐 1版主推荐
 	 * @param request
-	 * @param model
 	 * @throws JSONException
 	 */
 	@RequestMapping("/topic/o_recommend.jspx")

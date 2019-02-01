@@ -56,12 +56,12 @@
                     <span>来自话题:</span>
                     [#list topic.types as t]
                     [#if topic_index<3]
-					<span class="topic"><a href="javascript:openUrl('${t.url!}')">${t.name!}</a></span>
+					<span class="topic"><a onclick="openUrl('${t.url!}')">${t.name!}</a></span>
                     [/#if]
                     [/#list]
                 </div>
                 [/#if]
-				<h2 class="theme-tit"><a id="link${topic.id}" target="_blank" href="javascript:openUrl('${topic.url}')"
+				<h2 class="theme-tit"><a id="link${topic.id}" target="_blank" onclick="openUrl('${topic.url}')"
 										 [#if topic.style]
 										 style="color:#${topic.styleColor!};"
 										 [/#if]>[@text_cut s=topic.title?html /]</a></h2>

@@ -53,7 +53,7 @@ letter-spacing: -4px;
                 [#if forum??]
                   [#if f.id!=forum.id]
                   <li class="forum-item">
-                      <a href="javascript:openUrl('${f.url!}')">
+                      <a onclick="openUrl('${f.url!}')">
                       <img src="/${res}/bbs_forum/images/${f.path!}.png" /> ${f.title!?html}
                       [#if f.postToday gt 0]<span>${f.postToday!}</span>[/#if]
                   </a>
@@ -61,7 +61,7 @@ letter-spacing: -4px;
                   [/#if]
                 [#else]
                 <li class="forum-item">
-                    <a href="javascript:openUrl('${f.url!}')">
+                    <a onclick="openUrl('${f.url!}')">
                     <img src="/${res}/bbs_forum/images/${f.path!}.png" /> ${f.title!?html}
                     [#if f.postToday gt 0]<span>${f.postToday!}</span>[/#if]
                 </a>
